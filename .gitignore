@@ -1,0 +1,5 @@
+# ignore everythin inside the data and model folders
+data/
+model/
+# ignore ToDO.txt
+ToDo.txt
