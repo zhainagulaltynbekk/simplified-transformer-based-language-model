@@ -1,19 +1,27 @@
 import os, lzma
+import torch
+import numpy as np
 from tqdm import tqdm
+import matplotlib.pyplot as plt
 
+# automate downloading the openwebtext
 
-# takes a directory path as input and returns a list of filenames for files with a ".xz" extension in that directory
+# takes a directory path as input and returns a list of filenames for files with a ".xz" ot "txt" extension in that directory
 def xz_files_in_dir(directory):
     files = []
     for filename in os.listdir(directory):
-        if filename.endswith(".xz") and os.path.isfile(
+        if (filename.endswith(".xz") or filename.endswith(".txt")) and os.path.isfile(
             os.path.join(directory, filename)
         ):
             files.append(filename)
     return files
 
 
-folder_path = "C:/Users/ealtzha/OneDrive - Ericsson/Desktop/THESIS/openwebtext/openwebtext"  # where our xz files are located
+# folder_path = "C:/Users/ealtzha/OneDrive - Ericsson/Desktop/THESIS/openwebtext/openwebtext"  # where our xz files are located
+folder_path = (
+    "C:\\Users\\ealtzha\\OneDrive - Ericsson\\Desktop\\THESIS\\data-for-model-training"
+)
+
 output_file_train = "data/train_split.txt"
 output_file_val = "data/val_split.txt"
 vocab_file = "data/vocab.txt"  # file where we want to save our vocabulary,
@@ -26,7 +34,9 @@ total_files = len(files)
 # Calculate the split indices
 split_index = int(total_files * 0.9)  # 90% for training
 files_train = files[:split_index]
+print(f"Files for the training: {files_train}")
 files_val = files[split_index:]
+print(f"Files for the validation: {files_val}")
 
 # Split into train and validation data (we don't want out AI to generate exact same data, but to generate something like it)
 # process the training and validation seperately
@@ -38,21 +48,29 @@ vocab = set()
 with open(output_file_train, "w", encoding="utf-8") as outfile:
     for filename in tqdm(files_train, total=len(files_train)):
         file_path = os.path.join(folder_path, filename)
-        with lzma.open(file_path, "rt", encoding="utf-8") as infile:
+        with (
+            open(file_path, "rt", encoding="utf-8")
+            if filename.endswith(".txt")
+            else lzma.open(file_path, "rt", encoding="utf-8")
+        ) as infile:
             text = infile.read()
             outfile.write(text)
             characters = set(text)
-            vocab.update(characters)
+vocab.update(characters) # uncomment when you want to update your vocab.txt
 
 # process the validation files
 with open(output_file_val, "w", encoding="utf-8") as outfile:
     for filename in tqdm(files_val, total=len(files_val)):
         file_path = os.path.join(folder_path, filename)
-        with lzma.open(file_path, "rt", encoding="utf-8") as infile:
+        with (
+            open(file_path, "rt", encoding="utf-8")
+            if filename.endswith(".txt")
+            else lzma.open(file_path, "rt", encoding="utf-8")
+        ) as infile:
             text = infile.read()
             outfile.write(text)
             characters = set(text)
-            vocab.update(characters)
+vocab.update(characters)
 
 # the unique characters in the vocabulary are then written to a file specified
 # by vocab_file (presumably as a list of characters, one per line)

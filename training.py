@@ -19,15 +19,15 @@ import argparse
 #     args.batch_size
 # )
 batch_size = 32  # 64 how many independent sequences will we process in parallel?
-block_size = 128  # what is the maximum context length for prediction?
-max_iters = 200  # epoch (when user uploads text i can use the data i have to optimize)
+block_size = 128  # what is the maximum context length for prediction? length of a chunk
+max_iters = 10  # epoch (when user uploads text i can use the data i have to optimize)
 eval_interval = 100
 learning_rate = 3e-4
 device = "cuda" if torch.cuda.is_available() else "cpu"
-eval_iters = 100
+eval_iters = 1
 n_embd = 384
-n_head = 1  # 8 take way too long
-n_layer = 1  # 8
+n_head = 8  # 8 take way too long
+n_layer = 8  # 8
 dropout = 0.2
 
 print(device)
@@ -46,6 +46,7 @@ with open(
 chars = sorted(list(set(text)))
 vocab_size = len(chars)
 
+# Tokenizer
 # create a mapping from characters to integers
 stoi = {ch: i for i, ch in enumerate(chars)}
 itos = {i: ch for i, ch in enumerate(chars)}
@@ -240,7 +241,16 @@ class GPTLanguageModel(nn.Module):
             B, T, C = logits.shape  # batch time and a channel is the vocabulary size
             logits = logits.view(B * T, C)
             targets = targets.view(B * T)
+            # loss = F.mse_loss(
+            #     logits.argmax(dim=1).type(torch.float), targets.type(torch.float)
+            # )
             loss = F.cross_entropy(logits, targets)
+            # loss = torch.sqrt(
+            #     torch.mean(
+            #         (logits.argmax(dim=1).type(torch.float) - targets.type(torch.float))
+            #         ** 2
+            #     )
+            # )
 
         return logits, loss
 
@@ -265,22 +275,16 @@ class GPTLanguageModel(nn.Module):
 model = GPTLanguageModel(vocab_size)
 # if you don't have your model make sure to comment this part before you create your model!
 # with this we will be able to train our model  multiple times
-# print("loading model parameters ...")
-# with open("model/model-01.pk1", "rb") as f:
-#     model = pickle.load(f)
-# print("loaded successfully!")
+print("loading model parameters ...")
+with open("model/model-01.pk1", "rb") as f:
+    model = pickle.load(f)
+print("loaded successfully!")
 m = model.to(device)
 
 # create a PyTorch optimizer
 optimizer = torch.optim.AdamW(model.parameters(), lr=learning_rate)
 
 for iter in range(max_iters):
-    # every once in a while evaluate the loss on train and val sets
-    if iter % eval_iters == 0:
-        losses = estimate_loss()
-        print(
-            f"step {iter}, train loss {losses['train']:.3f}, validation loss {losses['val']:.3f}"
-        )
 
     # sample a batch of data
     xb, yb = get_batch("train")
@@ -289,7 +293,14 @@ for iter in range(max_iters):
     logits, loss = model.forward(xb, yb)
     optimizer.zero_grad(set_to_none=True)
     loss.backward()
-    optimizer.step()
+    optimizer.step()  # neuron get updated ????
+    # every once in a while evaluate the loss on train and val sets
+    if iter % eval_iters == 0:
+        losses = estimate_loss()
+        print(
+            f"step {iter}, train loss {losses['train']:.3f}, validation loss {losses['val']:.3f}, model loss {loss:.3f}"
+        )
+
 print(loss.item())
 
 #  it serializes the trained model and writes it to the file
@@ -297,7 +308,12 @@ with open("model/model-01.pk1", "wb") as f:
     pickle.dump(model, f)  # dump = save
 print("model saved")
 
-# generate from the model
-context = torch.zeros((1, 1), dtype=torch.long, device=device)
-generated_chars = decode(m.generate(context, max_new_tokens=500)[0].tolist())
-print(generated_chars)
+
+# generate from the models
+def generate_text():
+    context = torch.zeros((1, 1), dtype=torch.long, device=device)
+    generated_chars = decode(m.generate(context, max_new_tokens=500)[0].tolist())
+    return generated_chars
+
+
+print(generate_text())
