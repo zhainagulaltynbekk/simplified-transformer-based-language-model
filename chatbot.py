@@ -217,3 +217,5 @@ while True:
         m.generate(context.unsqueeze(0), max_new_tokens=150)[0].tolist()
     )
     print(f"Completion:\n{generated_chars}")
+    # context = torch.zeros((1, 1), dtype=torch.long, device=device)
+    # print(decode(m.generate(context, max_new_tokens=150)[0].tolist()))

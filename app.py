@@ -2,7 +2,17 @@ import torch
 import torch.nn as nn
 from torch.nn import functional as F
 import pickle  # instead of torch.load and torch.save
-from flask import Flask, render_template, request
+from flask import (
+    Flask,
+    request,
+    jsonify,
+    Response,
+    stream_with_context,
+    render_template,
+)
+from flask_cors import CORS
+import time
+
 
 batch_size = 32  # 64 how many independent sequences will we process in parallel?
 block_size = 128  # what is the maximum context length for prediction?
@@ -32,6 +42,7 @@ chars = sorted(list(set(text)))
 vocab_size = len(chars)
 
 app = Flask(__name__)
+CORS(app)
 
 # create a mapping from characters to integers
 stoi = {ch: i for i, ch in enumerate(chars)}
@@ -187,8 +198,6 @@ class GPTLanguageModel(nn.Module):
         return idx
 
 
-model = GPTLanguageModel(vocab_size)
-
 # Initialize your chatbot model
 model = GPTLanguageModel(vocab_size)
 
@@ -199,16 +208,27 @@ print("loaded successfully!")
 m = model.to("cpu")
 
 
+# for html
 @app.route("/")
 def index():
     return render_template("chat.html")
 
 
-@app.route("/get", methods=["POST"])
-def chat():
+# for html
+@app.route("/get-2", methods=["POST"])
+def chat2():
     if request.method == "POST":
         msg = request.form["msg"]
         return get_chat_response_without_echo(msg)
+
+
+# for react buffered way
+@app.route("/get", methods=["POST"])
+def chat():
+    data = request.get_json()  # Get JSON data sent from the client
+    msg = data["msg"]
+    response_text = get_chat_response_without_echo(msg)
+    return jsonify({"message": response_text})
 
 
 def get_chat_response(text):
@@ -218,6 +238,27 @@ def get_chat_response(text):
         m.generate(context.unsqueeze(0), max_new_tokens=150)[0].tolist()
     )
     return generated_response
+
+
+@app.route("/stream", methods=["POST"])
+def stream_chat():
+    data = request.get_json()  # Get JSON data sent from the client
+    msg = data["msg"]
+
+    def generate_stream():
+        context = torch.tensor(encode(msg), dtype=torch.long)
+        generated_idx = m.generate(context.unsqueeze(0), max_new_tokens=150)[0]
+
+        # Determine where the new text starts by skipping the input context length
+        generated_tokens = generated_idx.tolist()[len(context) :]
+
+        # Generate and yield each character of the new text
+        for token in generated_tokens:
+            character = decode([token])
+            yield character
+            time.sleep(0.05)  # Delay to simulate typing
+
+    return Response(stream_with_context(generate_stream()), mimetype="text/plain")
 
 
 def get_chat_response_without_echo(text):

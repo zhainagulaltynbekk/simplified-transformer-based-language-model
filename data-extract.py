@@ -6,6 +6,7 @@ import matplotlib.pyplot as plt
 
 # automate downloading the openwebtext
 
+
 # takes a directory path as input and returns a list of filenames for files with a ".xz" ot "txt" extension in that directory
 def xz_files_in_dir(directory):
     files = []
@@ -56,7 +57,7 @@ with open(output_file_train, "w", encoding="utf-8") as outfile:
             text = infile.read()
             outfile.write(text)
             characters = set(text)
-vocab.update(characters) # uncomment when you want to update your vocab.txt
+# vocab.update(characters)  # uncomment when you want to update your vocab.txt
 
 # process the validation files
 with open(output_file_val, "w", encoding="utf-8") as outfile:
