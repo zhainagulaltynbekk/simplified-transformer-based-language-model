@@ -1,4 +1,7 @@
+import io, sys
 import torch
+import mmap
+import random
 import torch.nn as nn
 from torch.nn import functional as F
 import pickle  # instead of torch.load and torch.save
@@ -15,14 +18,14 @@ import time
 
 batch_size = 32  # 64 how many independent sequences will we process in parallel?
 block_size = 128  # what is the maximum context length for prediction?
-max_iters = 200  # epoch (when user uploads text i can use the data i have to optimize)
+max_iters = 10  # epoch (when user uploads text i can use the data i have to optimize)
 eval_interval = 100
 learning_rate = 3e-4
 device = "cuda" if torch.cuda.is_available() else "cpu"
-eval_iters = 100
+eval_iters = 1
 n_embd = 384
-n_head = 1  # 8 take way too long
-n_layer = 1  # 8
+n_head = 8  # 8 take way too long
+n_layer = 8  # 8
 dropout = 0.2
 
 torch.manual_seed(
@@ -41,7 +44,8 @@ chars = sorted(list(set(text)))
 vocab_size = len(chars)
 
 app = Flask(__name__)
-CORS(app)
+CORS(app, supports_credentials=True, resources={r"/*": {"origins": "*"}})
+# CORS(app, resources={r"/model-train/*": {"origins": "http://localhost:3000"}})
 
 # create a mapping from characters to integers
 stoi = {ch: i for i, ch in enumerate(chars)}
@@ -50,6 +54,65 @@ encode = lambda s: [stoi[c] for c in s]  # encoder: take a string, output a list
 decode = lambda l: "".join(
     [itos[i] for i in l]
 )  # decoder: take list of integers, output a string
+
+
+# memory map for using small snippets of text from a single file of any size
+def get_random_chunk(split):  # split indicates whether to load data for train or val
+    filename = (
+        "data/train_split.txt" if split == "train" else "data/val_split.txt"
+    )  # takes appropriate file accroding to the split
+    with open(filename, "rb") as f:
+        with mmap.mmap(
+            f.fileno(), 0, access=mmap.ACCESS_READ
+        ) as mm:  # opens the file in a binary mode and creates a memory-mapped file object (mmap) to efficiently access chunks of data without loading the entire file into memory
+            # Determines the file size and a random position to start reading
+            file_size = len(mm)
+            start_pos = random.randint(0, (file_size) - block_size * batch_size)
+
+            # Seek to the random position and read the block of text
+            mm.seek(start_pos)
+            block = mm.read(block_size * batch_size - 1)
+
+            # Decode the block to a string, ignoring any invalid byte sequences
+            decoded_block = block.decode("utf-8", errors="ignore").replace("\r", "")
+
+            # Train and test splits
+            data = torch.tensor(encode(decoded_block), dtype=torch.long)
+
+    return data
+
+
+# data loading
+def get_batch(split):
+    data = get_random_chunk(split)  # gets a chunk of data for the specific split
+    ix = torch.randint(
+        len(data) - block_size, (batch_size,)
+    )  # generates random indices ix for selecting batch from data
+    # creates tensors x and y representing input and target sequences, respectively, for the language model.
+    # x is a stack of subsequences from the data, each of length block_size.
+    # y is a stack of subsequences that follow the corresponding subsequences in x.
+    # moves the tensors to the specified device (CPU or GPU).
+    x = torch.stack([data[i : i + block_size] for i in ix])
+    y = torch.stack([data[i + 1 : i + block_size + 1] for i in ix])
+    x, y = x.to(device), y.to(device)
+    return x, y
+
+
+@torch.no_grad()  # PyTorch will make sure not to use gradients here
+def estimate_loss():
+    out = {}
+    model.eval()  # puts the model on an evaluation mode
+    for split in ["train", "val"]:
+        losses = torch.zeros(
+            eval_iters
+        )  # stores the losses obtained in multiple iterations
+        for k in range(eval_iters):
+            X, Y = get_batch(split)
+            logits, loss = model(X, Y)
+            losses[k] = loss.item()
+        out[split] = losses.mean()
+    model.train()  # puts the model on a training mode
+    return out
 
 
 class Head(nn.Module):
@@ -200,43 +263,60 @@ class GPTLanguageModel(nn.Module):
 # Initialize your chatbot model
 model = GPTLanguageModel(vocab_size)
 
-print("loading model parameters ...")
-with open("model/model-01.pk1", "rb") as f:
-    model = pickle.load(f)
-print("loaded successfully!")
-m = model.to("cpu")
+try:
+    print("loading model parameters ...")
+    with open("model/model-01.pk1", "rb") as f:
+        model = pickle.load(f)
+    print("loaded successfully!")
+except FileNotFoundError:
+    print("Model file not found, initializing new model!")
+    model = GPTLanguageModel(vocab_size)
+
+m = model.to(device)
 
 
-# for html
-@app.route("/")
-def index():
-    return render_template("chat.html")
+def train_model():
+    # Redirect stdout
+    old_stdout = sys.stdout
+    sys.stdout = output = io.StringIO()
+    try:
+        print(device)
+        # Setup the training configuration
+        optimizer = torch.optim.AdamW(model.parameters(), lr=learning_rate)
+        for iter in range(max_iters):
+            xb, yb = get_batch("train")
+            # evaluate the loss
+            logits, loss = model.forward(xb, yb)
+            optimizer.zero_grad(set_to_none=True)
+            loss.backward()
+            optimizer.step()  # neuron get updated ????
+            # every once in a while evaluate the loss on train and val sets
+            if iter % eval_iters == 0:
+                losses = estimate_loss()
+                print(
+                    f"step {iter}, train loss {losses['train']:.3f}, validation loss {losses['val']:.3f}, model loss {loss:.3f}"
+                )
 
+            print(loss.item())
 
-# for html
-@app.route("/get-2", methods=["POST"])
-def chat2():
-    if request.method == "POST":
-        msg = request.form["msg"]
-        return get_chat_response_without_echo(msg)
+        #  it serializes the trained model and writes it to the file
+        with open("model/model-01.pk1", "wb") as f:
+            pickle.dump(model, f)  # dump = save
+        print("model saved")
 
+        # generate from the models
+        def generate_text():
+            context = torch.zeros((1, 1), dtype=torch.long, device=device)
+            generated_chars = decode(
+                m.generate(context, max_new_tokens=500)[0].tolist()
+            )
+            return generated_chars
 
-# for react buffered way
-@app.route("/get", methods=["POST"])
-def chat():
-    data = request.get_json()  # Get JSON data sent from the client
-    msg = data["msg"]
-    response_text = get_chat_response_without_echo(msg)
-    return jsonify({"message": response_text})
-
-
-def get_chat_response(text):
-    # Generate response from the chatbot model
-    context = torch.tensor(encode(text), dtype=torch.long)
-    generated_response = decode(
-        m.generate(context.unsqueeze(0), max_new_tokens=150)[0].tolist()
-    )
-    return generated_response
+        print(generate_text())
+    finally:
+        # Restore stdout
+        sys.stdout = old_stdout
+    return output.getvalue()
 
 
 @app.route("/stream", methods=["POST"])
@@ -260,15 +340,15 @@ def stream_chat():
     return Response(stream_with_context(generate_stream()), mimetype="text/plain")
 
 
-def get_chat_response_without_echo(text):
-    # Generate response from your chatbot model
-    context = torch.tensor(encode(text), dtype=torch.long)
-    generated_response = decode(
-        m.generate(context.unsqueeze(0), max_new_tokens=150)[0].tolist()
-    )
-    # Split the generated response by the first occurrence of the input text
-    generated_response = generated_response.split(text, 1)[-1].strip()
-    return generated_response
+@app.route("/model-train", methods=["POST"])
+def model_train_endpoint():
+    def generate():
+        output = train_model()
+        for line in output.splitlines():
+            yield line + "\n"
+            time.sleep(0.5)  # Simulate delay for streaming
+
+    return Response(stream_with_context(generate()), mimetype="text/plain")
 
 
 if __name__ == "__main__":

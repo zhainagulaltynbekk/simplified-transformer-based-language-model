@@ -1,17 +1,22 @@
 import './App.css';
-import  Chat  from './components/Chat';
-
-import { BrowserRouter as Router, Routes, Route} from 'react-router-dom';
+import {BrowserRouter, Routes, Route} from 'react-router-dom'
+import Home from './pages/Home'
+import NoPage from './pages/NoPage';
+import Progress from './pages/Progress';
+import Train from './pages/Train';
 
 const App = () => {
   return (
-    <Router>
-      <div className="App">
-        <Routes>
-          <Route path="/" element={<Chat />} />
-        </Routes>
-      </div>
-    </Router>
+    <>
+    <BrowserRouter>
+      <Routes>
+        <Route index element={<Home/>}></Route>
+        <Route path='/progress' element={<Progress/>}></Route>
+        <Route path='/train' element={<Train/>}></Route>
+        <Route path='*' element={<NoPage/>}></Route>
+      </Routes>
+    </BrowserRouter>
+    </>
   );
 }
 

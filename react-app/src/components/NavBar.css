@@ -1,0 +1,59 @@
+.navbar {
+    margin-left: 30px;
+    padding: 20px 0;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-family: sans-serif;
+    border-bottom: 1px solid #cbd5e1;
+    position: relative; /* Allows absolute positioning inside the navbar */
+}
+
+.navbar-menu {
+    display: flex;
+    list-style: none;
+    gap: 42px;
+    color: #65758b;
+    font-size: 17px;
+    margin-bottom: -16px; /* Aligns the bottom of the navbar-menu with the navbar's border */
+}
+
+.navbar .active {
+    padding-bottom: 10px;
+    color: #0246e3;
+    position: relative;
+}
+
+.navbar li {
+    cursor: pointer;
+    position: relative;
+}
+
+.navbar li::after {
+    content: '';
+    display: block;
+    margin: auto;
+    height: 2px;
+    width: 0px; /* Initial width of the line */
+    background: transparent;
+    position: absolute;
+    bottom: 0; /* Position right at the bottom of the li */
+    left: 50%;
+    transform: translateX(-50%);
+}
+
+.navbar li:hover::after {
+    width: calc(100% + 42px); /* Wider underline on hover */
+    background: #a7b0bd;
+    bottom: -5px;
+}
+
+.navbar li:hover {
+    color: #1d283a; /* Text color on hover */
+}
+
+.navbar .active::after {
+    width: calc(100% + 42px); /* Adjust width for active state */
+    background: #0246e3; /* Underline color for active state */
+    bottom: -5px; /* Slightly lower to overlap the navbar's bottom border */
+}
