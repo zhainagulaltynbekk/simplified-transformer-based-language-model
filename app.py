@@ -8,7 +8,6 @@ from flask import (
     jsonify,
     Response,
     stream_with_context,
-    render_template,
 )
 from flask_cors import CORS
 import time
