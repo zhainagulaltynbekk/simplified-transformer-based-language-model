@@ -128,9 +128,6 @@ a{
     margin-left: 30px;
 }
 
-.param-form {
-    margin-left: 30px;
-}
 
 .addBtn {
     height: 2rem;
@@ -309,10 +306,97 @@ a{
     padding-left: 12rem;
 }
 
+.param-form {
+    margin-left: 30px;
+}
+
 .form-item {
-    padding: 5px;
-    margin-right: 10px;
-    margin-bottom: 10px;
+    /* Flex-direction column makes items stack vertically */
+    display: flex;
+    flex-direction: column;
+    margin-right: 15px; /* Space between form items */
+    margin-bottom: 15px; /* Space below each form item */
+    flex-basis: calc(25% - 15px); /* Adjusts the item width to fit 3 per row, accounting for margin */
+}
+  
+.form-item label {
+    margin-bottom: 5px; /* Space between label and input */
+    font-size: 14px;
+}
+  
+/* Adjust this as necessary to prevent the last item in a row from having a margin */
+.form-row .form-item:last-child {
+    margin-right: 0;
+}
+  
+/* This makes sure the file input aligns with the rest */
+input[type="file"] {
+    display: inline-block;
+}
+  
+.form-row {
+    display: flex;
+    flex-wrap: wrap;
+}
+  
+  /* The submit button needs to be full width */
+.form-btn {
+    flex-basis: 100%;
+}
+
+.form-input{
+    height: 4rem;
+    border: 1px solid #cbd5e1;
+    border-radius: 7px;
+    font-size: 15px;
+}
+
+.form-input:focus {
+    outline-color: #2453c0;
+    transition: border 0.3s ease-in-out;
+}
+
+.form-item input[type="text"],
+.form-item input[type="number"] {
+    padding-left: 15px;
+}
+
+.form-item input[type="file"] {
+    width: 100%; /* Full width of its container */
+}
+  
+.form-item input[type="file"]::file-selector-button {
+    margin-right: 20px;
+    padding-top: 1rem;
+    padding-bottom: 1rem;
+    padding-left: 3.5rem;
+    padding-right: 3.5rem;
+    border: 1px solid #cbd5e1;
+    background-color: white;
+    border-radius: 7px;
+}
+
+.form-item input[type="file"]::file-selector-button:hover {
+    background-color: #c6d8ee; /* Background color when the item is clicked */
+    border: 1px solid #c6d8ee;
+}
+
+.form-btn {
+    margin-top: 5px;
+    border: none;
+    font-size: 17px;
+    border-radius: 0.4rem;
     border: 1px solid rgb(201, 198, 198);
-    border-radius: 5px;
+    padding-top: 0.7rem;
+    padding-bottom: 0.7rem;
+    padding-left: 2rem;
+    padding-right: 2rem;
+    background: white;
+    align-items: center;
+    transition: background-color 0.3s;
+}
+
+.form-btn:hover {
+    background-color: #c6d8ee; /* Background color when the item is clicked */
+    border: 1px solid #c6d8ee;
 }
