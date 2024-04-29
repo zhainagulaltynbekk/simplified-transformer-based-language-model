@@ -1,11 +1,57 @@
-import os, lzma
-import torch
-import numpy as np
+import os
+import lzma
 from tqdm import tqdm
-import matplotlib.pyplot as plt
+import requests
+import PyPDF2
 
-# automate downloading the openwebtext
 
+# only url with pdf or txt files should be given
+def download_file_from_url(url, save_path):
+    """ Download a file from a URL to a specified local path """
+    response = requests.get(url, stream=True)
+    if response.status_code == 200:
+        with open(save_path, 'wb') as f:
+            f.write(response.content)
+    else:
+        print(f"Failed to download {url}")
+
+
+# Example of downloading multiple files
+# file_urls = [
+#     '',
+#     ''
+# ]
+def download_files_from_urls(file_urls):
+    for url in file_urls:
+        filename = url.split('/')[-1]
+        download_file_from_url(url, os.path.join('data', filename))
+
+
+def extract_text_from_pdf(pdf_path):
+    """ Extract text from a PDF file """
+    with open(pdf_path, "rb") as file:
+        pdf_reader = PyPDF2.PdfReader(file)
+        text = ""
+        for page in pdf_reader.pages:
+            text += page.extract_text()
+    return text
+
+
+# Assuming 'data' directory contains both PDF and TXT files downloaded previously
+def process_files(folder_path):
+    files = [f for f in os.listdir(folder_path) if f.endswith(('.pdf', '.txt'))]
+    text_output_path = 'data/combined_text.txt'
+    with open(text_output_path, 'w', encoding='utf-8') as outfile:
+        for filename in files:
+            file_path = os.path.join(folder_path, filename)
+            if filename.endswith('.txt'):
+                with open(file_path, 'r', encoding='utf-8') as infile:
+                    text = infile.read()
+            elif filename.endswith('.pdf'):
+                text = extract_text_from_pdf(file_path)
+            outfile.write(text)
+
+# process_files('data')
 
 # takes a directory path as input and returns a list of filenames for files with a ".xz" ot "txt" extension in that directory
 def xz_files_in_dir(directory):

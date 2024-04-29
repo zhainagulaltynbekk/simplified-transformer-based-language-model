@@ -10,6 +10,7 @@ import botIcon from '../images/round.png';
 import spinner from '../images/load.gif';
 import progress from '../images/progress.png';
 import msgIcon from '../images/msg.png';
+import dataPrep from '../images/data-prep.png'
 
 
 const Home = () => {
@@ -112,6 +113,9 @@ const Home = () => {
             </NavLink>
             <NavLink to="/saved" className={({ isActive }) => isActive ? 'listItems activeLink' : 'listItems'}>
                 <img src={saved} alt='saved' className='listItemsImg' />Saved
+            </NavLink>
+            <NavLink to="/data-prep" className={({ isActive }) => isActive ? 'listItems activeLink' : 'listItems'}>
+                <img src={dataPrep} alt='data preperation' className='listItemsImg' />Data Preperation
             </NavLink>
             <NavLink to="/train" className={({ isActive }) => isActive ? 'listItems activeLink' : 'listItems'}>
                 <img src={rocket} alt='train' className='listItemsImg' />Train

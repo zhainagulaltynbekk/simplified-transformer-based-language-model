@@ -1,4 +1,6 @@
 # ignore everythin inside the data and model folders
 __pycache__/
+data/
+model/
 # ignore ToDO.txt
 ToDo.txt

@@ -43,19 +43,48 @@ a{
 }
 
 .nav-content {
-    border-radius: 5px;
-    padding: 15px;
-    margin-left: 9px;
-    margin-left: 9px;
-    margin-top: 15px;
+    border-radius: 4px;
     background: #1d283a;
     color: #c8cdd2;
-    font-size: 13px;
+    font-size: 14px;
+    font-family:Arial, Helvetica, sans-serif;
     display: flex;
     flex-direction: column;
-    align-items: center; /* Centers content horizontally */
-    justify-content: center; /* Centers content vertically if you need */
-    width: 100%; /* Takes full width of its container */
+    justify-content: center;
+    width: 100%;
+    position: relative;
+    padding-left: 15px;
+    padding-top: 30px;
+    padding-bottom: 15px;
+    margin: 15px 9px; /* Fixed duplicated margin-left property */
+}
+
+.nav-header {
+    position: absolute;
+    top: 0;
+    left: 5px;
+    right: 5px;
+    padding-top: 15px;
+    box-sizing: border-box;
+    display: flex;
+    justify-content: space-between;
+}
+
+.nav-date {
+    color: #ffffff;
+    font-size: 10px;
+    margin: 0;
+    flex-grow: 0;;
+}
+
+.border-edge {
+    flex-grow: 1;
+    background-color: black;
+    height: 0.7px;
+    margin-top: auto;
+    margin-bottom: auto;
+    margin-left: 10px;
+    margin-right: 10px;
 }
 
 .mainHome {
@@ -357,7 +386,8 @@ input[type="file"] {
 }
 
 .form-item input[type="text"],
-.form-item input[type="number"] {
+.form-item input[type="number"],
+.form-item input[type="url"] {
     padding-left: 15px;
 }
 
@@ -367,8 +397,7 @@ input[type="file"] {
   
 .form-item input[type="file"]::file-selector-button {
     margin-right: 20px;
-    padding-top: 1rem;
-    padding-bottom: 1rem;
+    height: 4rem;
     padding-left: 3.5rem;
     padding-right: 3.5rem;
     border: 1px solid #cbd5e1;
@@ -386,7 +415,7 @@ input[type="file"] {
     border: none;
     font-size: 17px;
     border-radius: 0.4rem;
-    border: 1px solid rgb(201, 198, 198);
+    border: 1px solid #cbd5e1;
     padding-top: 0.7rem;
     padding-bottom: 0.7rem;
     padding-left: 2rem;
@@ -399,4 +428,133 @@ input[type="file"] {
 .form-btn:hover {
     background-color: #c6d8ee; /* Background color when the item is clicked */
     border: 1px solid #c6d8ee;
+}
+
+.data-btn {
+    margin-top: 25px;
+    height: 4rem;
+    border: none;
+    font-size: 16px;
+    border-radius: 7px;
+    border: 1px solid #cbd5e1;
+    background: white;
+    align-items: center;
+    transition: background-color 0.3s;
+}
+
+.data-btn:hover {
+    background-color: #c6d8ee; /* Background color when the item is clicked */
+    border: 1px solid #c6d8ee;
+}
+
+.data-logs {
+    border-radius: 4px;
+    background: #1d283a;
+    color: #c8cdd2;
+    font-size: 14px;
+    font-family:Arial, Helvetica, sans-serif;
+    display: flex;
+    flex-direction: column;
+    justify-content: center; /* Centers content vertically if needed */
+    width: 100%; /* Takes full width of its container */
+    position: relative;
+    padding-top: 40px; /* Adjusted to fit the date header inside */
+    padding-left: 20px;
+    padding-right: 20px; /* Add right padding to match the left */
+    padding-bottom: 15px; /* Maintain padding on the bottom */
+}
+
+.data-header {
+    position: absolute;
+    top: 0;
+    left: 5px; /* Start the header with a 5px space from the left edge */
+    right: 5px; /* End the header with a 5px space from the right edge */
+    padding-top: 15px;
+    box-sizing: border-box;
+    display: flex; /* Use flex to align the date */
+    justify-content: space-between; /* Aligns the date to the left and borders to the edges */
+}
+
+/* The date will now be a flex item, so we don't need pseudo-elements */
+.data-date {
+    color: #ffffff;
+    font-size: 10px;
+    margin: 0; /* Remove any default margins */
+    flex-grow: 0; /* Prevent the date from growing */
+}
+
+/* Create left and right border elements */
+.border-edge {
+    flex-grow: 1; /* Make the borders grow to fill space */
+    background-color: black; /* Color for the borders */
+    height: 0.7px; /* Height of the border */
+    margin-top: auto; /* Align to the bottom of the header */
+    margin-bottom: auto; /* Align to the bottom of the header */
+    margin-left: 10px; /* Space from the date or left edge */
+    margin-right: 10px; /* Space from the date or right edge */
+}
+
+.data-table {
+    margin-left: 150px;
+    margin-top: 10px;
+    margin-bottom: 10px;
+    width: 85%;
+    table-layout: fixed;
+    border-collapse: collapse;
+}
+
+.data-table th, .data-table td {
+    border: 1px solid #ccc;
+    text-align: center;
+    padding: 8px;
+}
+
+.data-title {
+    background-color: #66bcf3;
+    color: #fff;
+    display: inline-block;
+    font-size: 13px;
+    padding-top: 3px;
+    padding-bottom: 3px;
+    padding-left: 6px;
+    padding-right: 6px;
+    border-radius: 10px;
+    margin-bottom: 5px;
+}
+
+.data-files {
+    margin-left: 150px;
+}
+
+.data-file {
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 5px;
+}
+
+.data-info {
+    display: flex;
+    justify-content: space-between;
+    margin-left: 150px;
+    margin-bottom: 5px;
+}
+
+.upload-time {
+    color: #8d8f92; /* White text color */
+    font-size: 0.8em; /* Smaller font size */
+    margin-left: 10px; /* Add some space before the time */
+    border-radius: 4px; /* Optional: round the corners */
+}
+
+.progress-info {
+    display: flex;
+    justify-content: space-between;
+    margin-right: 15px;
+}
+
+.content-time {
+    color: #8d8f92; /* White text color */
+    font-size: 0.8em; /* Smaller font size */
+    margin-left: 10px; /* Add some space before the time */
+    border-radius: 4px; /* Optional: round the corners */
 }

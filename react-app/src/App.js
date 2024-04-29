@@ -4,6 +4,8 @@ import Home from './pages/Home'
 import NoPage from './pages/NoPage';
 import Progress from './pages/Progress';
 import Train from './pages/Train';
+import DataPrep from './pages/DataPrep';
+import Saved from './pages/Saved'
 
 const App = () => {
   return (
@@ -13,6 +15,8 @@ const App = () => {
         <Route index element={<Home/>}></Route>
         <Route path='/progress' element={<Progress/>}></Route>
         <Route path='/train' element={<Train/>}></Route>
+        <Route path='/data-prep' element={<DataPrep/>}></Route>
+        <Route path='/saved' element={<Saved/>}></Route>
         <Route path='*' element={<NoPage/>}></Route>
       </Routes>
     </BrowserRouter>

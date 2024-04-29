@@ -1,4 +1,5 @@
-import io, sys
+import io
+import sys
 import torch
 import mmap
 import random
@@ -13,7 +14,11 @@ from flask import (
     stream_with_context,
 )
 from flask_cors import CORS
+import os
 import time
+import lzma
+from tqdm import tqdm
+from werkzeug.utils import secure_filename
 
 
 batch_size = 32  # 64 how many independent sequences will we process in parallel?
@@ -54,6 +59,54 @@ encode = lambda s: [stoi[c] for c in s]  # encoder: take a string, output a list
 decode = lambda l: "".join(
     [itos[i] for i in l]
 )  # decoder: take list of integers, output a string
+
+# Define the path where uploaded files will be stored
+UPLOAD_FOLDER = "data/files/"
+os.makedirs(UPLOAD_FOLDER, exist_ok=True)
+
+
+class FileProcessor:
+    def __init__(self, folder_path):
+        self.folder_path = folder_path
+        self.vocab = set()
+
+    def xz_files_in_dir(self):
+        """List .xz or .txt files in a directory."""
+        files = []
+        for filename in os.listdir(self.folder_path):
+            if (
+                filename.endswith(".xz") or filename.endswith(".txt")
+            ) and os.path.isfile(os.path.join(self.folder_path, filename)):
+                files.append(filename)
+        return files
+
+    def process_text_files(self, output_file_train, output_file_val, vocab_file):
+        """Process text and .xz files, split into training and validation, update vocabulary."""
+        files = self.xz_files_in_dir()
+        total_files = len(files)
+        split_index = int(total_files * 0.9)  # 90% for training
+        files_train = files[:split_index]
+        files_val = files[split_index:]
+
+        with open(output_file_train, "w", encoding="utf-8") as outfile:
+            for filename in files_train:
+                file_path = os.path.join(self.folder_path, filename)
+                with open(file_path, "rt", encoding="utf-8") as infile:
+                    text = infile.read()
+                    outfile.write(text)
+                    self.vocab.update(set(text))
+
+        with open(output_file_val, "w", encoding="utf-8") as outfile:
+            for filename in files_val:
+                file_path = os.path.join(self.folder_path, filename)
+                with open(file_path, "rt", encoding="utf-8") as infile:
+                    text = infile.read()
+                    outfile.write(text)
+                    self.vocab.update(set(text))
+
+        with open(vocab_file, "w", encoding="utf-8") as vfile:
+            for char in self.vocab:
+                vfile.write(char + "\n")
 
 
 # memory map for using small snippets of text from a single file of any size
@@ -317,6 +370,56 @@ def train_model():
         # Restore stdout
         sys.stdout = old_stdout
     return output.getvalue()
+
+
+def prepare_data(files):
+    for file in files:
+        filename = file.filename
+        # Optionally, save the files to a server directory if needed
+        file.save(os.path.join("data/files/", filename))
+        # Process each file if needed right here or after saving
+        print(f"Processed {filename}")
+
+
+@app.route("/upload-files", methods=["POST"])
+def handle_files():
+    files = request.files.getlist("files")
+    if not files:
+        return jsonify({"error": "No files provided"}), 400
+    try:
+        for file in files:
+            filename = secure_filename(file.filename)
+            file.save(os.path.join(UPLOAD_FOLDER, filename))
+
+        # Process the files using FileProcessor
+        processor = FileProcessor(UPLOAD_FOLDER)
+        processor.process_text_files(
+            "data/train_test.txt", "data/val_test.txt", "data/vocab_test.txt"
+        )
+
+        # Prepare the data to send back
+        with open("data/vocab_test.txt", "r", encoding="utf-8") as f:
+            vocab = f.read()
+        with open("data/train_test.txt", "r", encoding="utf-8") as f:
+            train_length = len(f.read())
+        with open("data/val_test.txt", "r", encoding="utf-8") as f:
+            val_length = len(f.read())
+
+        return (
+            jsonify(
+                {
+                    "message": f"{len(files)} files processed successfully",
+                    "vocab": list(set(vocab)),
+                    "uploadedFiles": [file.filename for file in files],
+                    "vocabLength": len(set(vocab)),
+                    "trainLength": train_length,
+                    "valLength": val_length,
+                }
+            ),
+            200,
+        )
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
 
 
 @app.route("/stream", methods=["POST"])

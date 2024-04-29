@@ -4,13 +4,25 @@ import home from '../images/home.png';
 import saved from '../images/saved.png';
 import rocket from '../images/rocket.png';
 import progress from '../images/progress.png';
+import dataPrep from '../images/data-prep.png'
 import NavBar from '../components/NavBar';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 
 const Progress = () => {  
   const [currentMenu, setCurrentMenu] = useState("Logs");  // State to track the selected menu
   const [logs, setLogs] = useState(["Here are your logs..."]);
   const [loading, setLoading] = useState(false);
+  const [currentDate, setCurrentDate] = useState('');
+
+    useEffect(() => {
+        // Get the current date in the desired format
+        const date = new Date();
+        setCurrentDate(date.toLocaleDateString('en-US', {
+            year: 'numeric',
+            month: 'long',
+            day: 'numeric'
+        }));
+    }, []);
 
   const handleMenuChange = (menu) => {
     setCurrentMenu(menu);  // Update the current menu state
@@ -56,25 +68,54 @@ const Progress = () => {
   
   // Render the corresponding text based on the selected menu
   const renderContent = () => {
+    const header = (
+      <div className="nav-header">
+        <div className="border-edge"></div> {/* Left border */}
+        <span className="nav-date">{currentDate}</span>
+        <div className="border-edge"></div> {/* Right border */}
+      </div>
+    );
+
     switch (currentMenu) {
       case "Logs":
         return (
           <div className='nav-content'>
+            {header}
             {logs.map((log, index) => (
-              <p key={index}>{log}</p> // Each log line is rendered as a paragraph
+              <p key={index}>{log}</p>
             ))}
           </div>
         );
       case "Results":
-        return <p className='nav-content'>Here are your results...</p>;
+        return (
+          <div className='nav-content'>
+            {header}
+            <p>Here are your results...</p>
+          </div>
+        );
       case "Details":
-        return <p className='nav-content'>More details will be shown here...</p>;
+        return (
+          <div className='nav-content'>
+            {header}
+            <p>More details will be shown here...</p>
+          </div>
+        );
       case "Parameters":
-        return <p className='nav-content'>Adjust your parameters here...</p>;
+        return (
+          <div className='nav-content'>
+            {header}
+            <p>Adjust your parameters here...</p>
+          </div>
+        );
       default:
-        return <p className='nav-content'>Content goes here...</p>;
+        return (
+          <div className='nav-content'>
+            {header}
+            <p>Content goes here...</p>
+          </div>
+        );
     }
-  }  
+  }
 
   return (
       <div className="App">
@@ -85,6 +126,9 @@ const Progress = () => {
             </NavLink>
             <NavLink to="/saved" className={({ isActive }) => isActive ? 'listItems activeLink' : 'listItems'}>
                 <img src={saved} alt='saved' className='listItemsImg' />Saved
+            </NavLink>
+            <NavLink to="/data-prep" className={({ isActive }) => isActive ? 'listItems activeLink' : 'listItems'}>
+                <img src={dataPrep} alt='data preperation' className='listItemsImg' />Data Preperation
             </NavLink>
             <NavLink to="/train" className={({ isActive }) => isActive ? 'listItems activeLink' : 'listItems'}>
                 <img src={rocket} alt='train' className='listItemsImg' />Train
