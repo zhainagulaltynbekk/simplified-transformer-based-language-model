@@ -495,7 +495,7 @@ input[type="file"] {
 }
 
 .data-table {
-    margin-left: 150px;
+    margin-left: 30px;
     margin-top: 10px;
     margin-bottom: 10px;
     width: 85%;
@@ -519,11 +519,25 @@ input[type="file"] {
     padding-left: 6px;
     padding-right: 6px;
     border-radius: 10px;
-    margin-bottom: 5px;
+    margin-bottom: 15px;
+    margin-top: 15px;
+}
+
+.data-title-first {
+    background-color: #66bcf3;
+    color: #fff;
+    display: inline-block;
+    font-size: 13px;
+    padding-top: 3px;
+    padding-bottom: 3px;
+    padding-left: 6px;
+    padding-right: 6px;
+    border-radius: 10px;
+    margin-bottom: 15px;
 }
 
 .data-files {
-    margin-left: 150px;
+    margin-left: 60px;
 }
 
 .data-file {
@@ -535,14 +549,14 @@ input[type="file"] {
 .data-info {
     display: flex;
     justify-content: space-between;
-    margin-left: 150px;
+    margin-left: 30px;
     margin-bottom: 5px;
 }
 
 .progress-log {
     display: flex;
     justify-content: space-between;
-    margin-left: 8px;
+    margin-left: 3px;
     margin-right: 15px;
     margin-bottom: 5px;
 }
@@ -558,7 +572,6 @@ input[type="file"] {
     color: #8d8f92; /* White text color */
     font-size: 0.8em; /* Smaller font size */
     margin-left: 10px; /* Add some space before the time */
-    margin-right: 15px;
     border-radius: 4px; /* Optional: round the corners */
 }
 
@@ -573,4 +586,32 @@ input[type="file"] {
     font-size: 0.8em; /* Smaller font size */
     margin-left: 10px; /* Add some space before the time */
     border-radius: 4px; /* Optional: round the corners */
+}
+
+.train-content {
+    border-radius: 4px;
+    background: #1d283a;
+    color: #c8cdd2;
+    font-size: 14px;
+    font-family:Arial, Helvetica, sans-serif;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    width: 100%;
+    position: relative;
+    padding-left: 15px;
+    padding-top: 30px;
+    padding-bottom: 15px;
+    margin: 15px 9px; /* Fixed duplicated margin-left property */
+}
+
+.train-date {
+    position: absolute;
+    top: 0;
+    left: 5px; /* Start the header with a 5px space from the left edge */
+    right: 5px; /* End the header with a 5px space from the right edge */
+    padding-top: 15px;
+    box-sizing: border-box;
+    display: flex; /* Use flex to align the date */
+    justify-content: space-between; /* Aligns the date to the left and borders to the edges */
 }

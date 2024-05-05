@@ -111,7 +111,7 @@ const DataPrep = () => {
                     </div>
                     {result ? (
                         <div>
-                            <h3 className='data-title'>Uploaded Files</h3>
+                            <h3 className='data-title-first'>Uploaded Files</h3>
                             <p className='data-info'>{result.message}:<span className="upload-time">{uploadTime}</span></p>
                             <ul className='data-files'>
                                 {result.uploadedFiles.map(file => (

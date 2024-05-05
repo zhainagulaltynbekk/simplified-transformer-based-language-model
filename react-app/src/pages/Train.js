@@ -6,82 +6,78 @@ import rocket from '../images/rocket.png';
 import progress from '../images/progress.png';
 import dataPrep from '../images/data-prep.png';
 import axios from 'axios';
-import { useState } from 'react';
-
+import { useState, useEffect } from 'react';
 
 const Train = () => {  
   const [formData, setFormData] = useState({
-    batch_size: '32', // Default value
-    block_size: '128', // Default value
-    max_iters: '10', // Default value
-    eval_interval: '100', // Default value
-    learning_rate: '3e-4', // Default value
-    device: 'cpu', // Default value
-    eval_iters: '1', // Default value
-    n_embd: '384', // Default value
-    n_head: '8', // Default value
-    n_layer: '8', // Default value
-    dropout: '0.2', // Default value
+    batch_size: '32',
+    block_size: '128',
+    max_iters: '10',
+    eval_interval: '100',
+    learning_rate: '3e-4',
+    device: 'cpu',
+    eval_iters: '1',
+    n_embd: '384',
+    n_head: '8',
+    n_layer: '8',
+    dropout: '0.2',
     file: null
-  });  
-  
+  });
+  const [submittedData, setSubmittedData] = useState(null);  // State to store the submitted data
+  const [currentDate, setCurrentDate] = useState('');
+
+  useEffect(() => {
+    const date = new Date();
+    setCurrentDate(date.toLocaleDateString('en-US', {
+        year: 'numeric',
+        month: 'long',
+        day: 'numeric'
+    }));
+  }, []);
+
   const handleChange = (e) => {
     const { name, value } = e.target;
     setFormData(prev => ({ ...prev, [name]: value }));
   };
-  
+
   const handleFileChange = (e) => {
     setFormData(prev => ({ ...prev, file: e.target.files[0] }));
   };
-  
-  const handleSubmit = async (e) => {  // Mark the function as async
+
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    const completeFormData = {
-        ...formData,
-        batch_size: formData.batch_size || '32',
-        block_size: formData.block_size || '128',
-        max_iters: formData.max_iters || '10',
-        eval_interval: formData.eval_interval || '100',
-        learning_rate: formData.learning_rate || '3e-4',
-        device: formData.device || 'cpu',
-        eval_iters: formData.eval_iters || '1',
-        n_embd: formData.n_embd || '384',
-        n_head: formData.n_head || '8',
-        n_layer: formData.n_layer || '8',
-        dropout: formData.dropout || '0.2',
-    };
     try {
-        const response = await axios.post('http://localhost:5000/submit-form', completeFormData);
-        alert('Form submitted successfully!');
-        console.log('Server response:', response.data);
+      await axios.post('http://localhost:5000/submit-form', formData);
+      setSubmittedData(formData);  // Set submittedData to formData on successful submit
+      alert('Form submitted successfully!');
     } catch (error) {
-        alert('Failed to submit form!');
-        console.error('Error:', error);
+      alert('Failed to submit form!');
+      console.error('Error:', error);
     }
   };
 
   return (
-      <div className="App">
-        <div className='sideBar'>
-          <div className='upperSide'>
-            <NavLink to="/" className={({ isActive }) => isActive ? 'listItems activeLink' : 'listItems'} end>
-                <img src={home} alt='chat' className='listItemsImg' />Chat
-            </NavLink>
-            <NavLink to="/saved" className={({ isActive }) => isActive ? 'listItems activeLink' : 'listItems'}>
-                <img src={saved} alt='saved' className='listItemsImg' />Saved
-            </NavLink>
-            <NavLink to="/data-prep" className={({ isActive }) => isActive ? 'listItems activeLink' : 'listItems'}>
-                <img src={dataPrep} alt='data preperation' className='listItemsImg' />Data Preperation
-            </NavLink>
-            <NavLink to="/train" className={({ isActive }) => isActive ? 'listItems activeLink' : 'listItems'}>
-                <img src={rocket} alt='train' className='listItemsImg' />Train
-            </NavLink>
-            <NavLink to="/progress" className={({ isActive }) => isActive ? 'listItems activeLink' : 'listItems'}>
-                <img src={progress} alt='progress' className='listItemsImg' />Progress
-            </NavLink>
-          </div>
+    <div className="App">
+      <div className='sideBar'>
+        <div className='upperSide'>
+          <NavLink to="/" className={({ isActive }) => isActive ? 'listItems activeLink' : 'listItems'} end>
+              <img src={home} alt='chat' className='listItemsImg' />Chat
+          </NavLink>
+          <NavLink to="/saved" className={({ isActive }) => isActive ? 'listItems activeLink' : 'listItems'}>
+              <img src={saved} alt='saved' className='listItemsImg' />Saved
+          </NavLink>
+          <NavLink to="/data-prep" className={({ isActive }) => isActive ? 'listItems activeLink' : 'listItems'}>
+              <img src={dataPrep} alt='data preparation' className='listItemsImg' />Data Preparation
+          </NavLink>
+          <NavLink to="/train" className={({ isActive }) => isActive ? 'listItems activeLink' : 'listItems'}>
+              <img src={rocket} alt='train' className='listItemsImg' />Train
+          </NavLink>
+          <NavLink to="/progress" className={({ isActive }) => isActive ? 'listItems activeLink' : 'listItems'}>
+              <img src={progress} alt='progress' className='listItemsImg' />Progress
+          </NavLink>
         </div>
-        <div className="main">
+      </div>
+      <div className="main">
         <h2 className='pageName'>Train</h2>
         <form className='param-form' onSubmit={handleSubmit}>
           <div className='form-row'>
@@ -140,8 +136,23 @@ const Train = () => {
           </div>
           <button type="submit" className='form-btn'>Submit</button>
         </form>
+        <div className='train-content'>
+          <div className="train-date">
+            <div className="border-edge"></div>
+            <span className="data-date">{currentDate}</span>
+            <div className="border-edge"></div>
+          </div>
+          {submittedData && (
+            <div>
+              <h3 className='data-title-first'>Hyperparameters</h3>
+              {Object.entries(submittedData).map(([key, value]) => (
+                key !== 'file' ? <div className='data-info' key={key}>{`${key}: ${value}`}</div> : null
+              ))}
+            </div>
+          )}
         </div>
       </div>
+    </div>
   );
 }
 

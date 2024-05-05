@@ -386,7 +386,7 @@ def train_model():
             print(f"LOG: {loss.item()}")
 
         #  it serializes the trained model and writes it to the file
-        
+
         with open("model/model-01.pk1", "wb") as f:
             pickle.dump(model, f)  # dump = save
         print("LOG: model saved")
@@ -459,6 +459,20 @@ def handle_files():
         )
     except Exception as e:
         return jsonify({"error": str(e)}), 500
+
+
+@app.route("/submit-form", methods=["POST"])
+def handle_form_submission():
+    # Extract form data from the request
+    form_data = request.json
+    print("Received form data:")
+    for key, value in form_data.items():
+        print(f"{key}: {value}")
+
+    # Prepare a response
+    response = {"message": "Form submitted successfully!", "receivedData": form_data}
+
+    return jsonify(response), 200
 
 
 # Progress route
