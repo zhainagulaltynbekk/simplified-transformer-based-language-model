@@ -4,7 +4,7 @@ import home from '../images/home.png';
 import saved from '../images/saved.png';
 import rocket from '../images/rocket.png';
 import progress from '../images/progress.png';
-import dataPrep from '../images/data-prep.png'
+import dataPrep from '../images/data-prep.png';
 
 const Saved = () => {  
   return (

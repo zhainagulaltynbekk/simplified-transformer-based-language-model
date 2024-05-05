@@ -15,7 +15,7 @@ const NavBar = ({ onMenuChange, content }) => {
       <ul className='navbar-menu'>
         <li onClick={() => handleClick("Logs")} className={menu === "Logs" ? "active" : ""}>Logs</li>
         <li onClick={() => handleClick("Results")} className={menu === "Results" ? "active" : ""}>Results</li>
-        <li onClick={() => handleClick("Details")} className={menu === "Details" ? "active" : ""}>Details</li>
+        <li onClick={() => handleClick("Sample")} className={menu === "Sample" ? "active" : ""}>Sample</li>
         <li onClick={() => handleClick("Parameters")} className={menu === "Parameters" ? "active" : ""}>Parameters</li>
       </ul>
     </div>

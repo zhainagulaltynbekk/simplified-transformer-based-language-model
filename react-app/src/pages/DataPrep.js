@@ -112,16 +112,24 @@ const DataPrep = () => {
                     {result ? (
                         <div>
                             <h3 className='data-title'>Uploaded Files</h3>
+                            <p className='data-info'>{result.message}:<span className="upload-time">{uploadTime}</span></p>
                             <ul className='data-files'>
                                 {result.uploadedFiles.map(file => (
-                                    <li className='data-file' key={file}>{file}<span className="upload-time">{uploadTime}</span></li>
+                                    <li className='data-file' key={file}>{file}</li>
                                 ))}
                             </ul>
+                            <p className='data-info'>Uploaded files will be saved in {result.upload_folder}</p>
+                            <h3 className='data-title'>Train Split</h3>
+                            <p className='data-info'>{result.train_file_percentage}% of the uploaded files will be used as a training data<span className="upload-time">{uploadTime}</span></p>
+                            <p className='data-info'>Training split will be saved in {result.output_file_train}</p>
+                            <p className='data-info'>Train Text Length: {result.trainLength}</p>
+                            <h3 className='data-title'>Validation Split</h3>
+                            <p className='data-info'>{result.val_file_percentage}% of the uploaded files will be used as a validation data<span className="upload-time">{uploadTime}</span></p>
+                            <p className='data-info'>Validation split will be saved in {result.output_file_val} data/val_test.txt</p>
+                            <p className='data-info'>Validation Text Length: {result.valLength}</p> 
                             <h3 className='data-title'>Vocabulary</h3>
-                            <p className='data-info'>90% of the given data will be used as a training data and the 10% will be used as a validation data<span className="upload-time">{uploadTime}</span></p>
-                            <p className='data-info'>Vocabulary Length: {result.vocabLength}<span className="upload-time">{uploadTime}</span></p>
-                            <p className='data-info'>Train Text Length: {result.trainLength}<span className="upload-time">{uploadTime}</span></p>
-                            <p className='data-info'>Validation Text Length: {result.valLength}<span className="upload-time">{uploadTime}</span></p>
+                            <p className='data-info'>Vocabulary file will be saved in {result.vocab_file}<span className="upload-time">{uploadTime}</span></p>
+                            <p className='data-info'>Vocabulary Length: {result.vocabLength}</p>
                             <table className="data-table">
                                 <tbody>
                                     {chunkArray(result.vocab, columnsPerRow).map((row, idx) => (

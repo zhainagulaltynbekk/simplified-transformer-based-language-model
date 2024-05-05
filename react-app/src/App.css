@@ -539,10 +539,26 @@ input[type="file"] {
     margin-bottom: 5px;
 }
 
+.progress-log {
+    display: flex;
+    justify-content: space-between;
+    margin-left: 8px;
+    margin-right: 15px;
+    margin-bottom: 5px;
+}
+
 .upload-time {
     color: #8d8f92; /* White text color */
     font-size: 0.8em; /* Smaller font size */
     margin-left: 10px; /* Add some space before the time */
+    border-radius: 4px; /* Optional: round the corners */
+}
+
+.upload-time-prg {
+    color: #8d8f92; /* White text color */
+    font-size: 0.8em; /* Smaller font size */
+    margin-left: 10px; /* Add some space before the time */
+    margin-right: 15px;
     border-radius: 4px; /* Optional: round the corners */
 }
 

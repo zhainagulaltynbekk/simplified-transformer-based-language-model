@@ -10,9 +10,13 @@ import { useState, useEffect } from 'react';
 
 const Progress = () => {  
   const [currentMenu, setCurrentMenu] = useState("Logs");  // State to track the selected menu
-  const [logs, setLogs] = useState(["Here are your logs..."]);
+  const [logs, setLogs] = useState(["Logs will appear here ..."]);
+  const [results, setResults] = useState(["Results of the training will appear here ..."]);
+  const [parameters, setParameters] = useState(["Parameters used for this training will be listed here ..."]);
+  const [samples, setSample] = useState(["Sample trained text generated will be here ..."]);
   const [loading, setLoading] = useState(false);
   const [currentDate, setCurrentDate] = useState('');
+  const [uploadTime, setUploadTime] = useState('');
 
     useEffect(() => {
         // Get the current date in the desired format
@@ -30,7 +34,18 @@ const Progress = () => {
 
   const fetchLogs = async () => {
     setLoading(true);
-    setLogs(["Training process started"]); // Log that the training process has started
+    setLogs(["Training process started."]); // Log that the training process has started
+    setResults(["Training process started. Results of the training process will be here."]);
+    setParameters(["Training process started. Parameters of the training will appear here."]);
+    setSample(["The below you can see the text sample text generated after the current training process."]);
+
+    const now = new Date();
+    setUploadTime(now.toLocaleTimeString('en-US', {
+      hour: '2-digit',
+      minute: '2-digit',
+      second: '2-digit',
+      hour12: true
+    }));
     
     try {
       const response = await fetch('http://localhost:5000/model-train', {
@@ -46,22 +61,42 @@ const Progress = () => {
       }
   
       const reader = response.body.getReader();
-      const decoder = new TextDecoder();
+      const decoder = new TextDecoder('utf-8');
   
       let done, value;
+      let isSampleBlock = false;
+      let sampleBuffer = [];
       while (!done) {
         ({ done, value } = await reader.read());
         if (value) {
-          const logContent = decoder.decode(value, { stream: true });
-          setLogs(prevLogs => [...prevLogs, logContent]);
+          const logContent = decoder.decode(value, { stream: true }).replace(/\r\n?/g, "\n").split("\n");
+          logContent.forEach(line => {
+            if (line.startsWith("SAMPLE_BLOCK_START")) {
+              isSampleBlock = true;
+              sampleBuffer = [];
+            } else if (line.startsWith("SAMPLE_BLOCK_END")) {
+              isSampleBlock = false;
+              setSample(prevSample => [...prevSample, sampleBuffer.join('\n')]);  // Join buffer and update sample
+            } else if (isSampleBlock) {
+              sampleBuffer.push(line);
+            } else {
+              if (line.startsWith("LOG:")) {
+                setLogs(prevLogs => [...prevLogs, line.substring(5)]);
+              } else if (line.startsWith("RESULT:")) {
+                setResults(prevResults => [...prevResults, line.substring(8)]);
+              } else if (line.startsWith("PARAM:")) {
+                setParameters(prevParams => [...prevParams, line.substring(7)]);
+              }
+            }
+          });
         }
       }
   
       setLogs(prevLogs => [...prevLogs, "Training completed"]); // Log that the training is completed
-      setLoading(false);
     } catch (error) {
       console.error('Failed to fetch logs:', error.message);
       setLogs(prevLogs => [...prevLogs, "Failed to fetch logs."]);
+    } finally {
       setLoading(false);
     }
   };
@@ -70,9 +105,9 @@ const Progress = () => {
   const renderContent = () => {
     const header = (
       <div className="nav-header">
-        <div className="border-edge"></div> {/* Left border */}
+        <div className="border-edge"></div>
         <span className="nav-date">{currentDate}</span>
-        <div className="border-edge"></div> {/* Right border */}
+        <div className="border-edge"></div>
       </div>
     );
 
@@ -81,30 +116,29 @@ const Progress = () => {
         return (
           <div className='nav-content'>
             {header}
-            {logs.map((log, index) => (
-              <p key={index}>{log}</p>
-            ))}
+            {logs.map((log, index) => <p className="progress-log" key={index}>{log}<span className="upload-time-prg">{uploadTime}</span></p>)}
           </div>
         );
       case "Results":
         return (
           <div className='nav-content'>
             {header}
-            <p>Here are your results...</p>
-          </div>
-        );
-      case "Details":
-        return (
-          <div className='nav-content'>
-            {header}
-            <p>More details will be shown here...</p>
+            {results.map((result, index) => <p className="progress-log" key={index}>{result}<span className="upload-time-prg">{uploadTime}</span></p>)}
           </div>
         );
       case "Parameters":
         return (
           <div className='nav-content'>
             {header}
-            <p>Adjust your parameters here...</p>
+            {parameters.map((param, index) => <p className="progress-log" key={index}>{param}<span className="upload-time-prg">{uploadTime}</span></p>)}
+          </div>
+        );
+      case "Sample":
+        return (
+          <div className='nav-content'>
+            {header}
+            <p className='progress-log'>Training process started.<span className="upload-time-prg">{uploadTime}</span></p>
+            {samples.map((sample, index) => <p className="progress-log" key={index}>{sample}</p>)}
           </div>
         );
       default:
@@ -115,7 +149,8 @@ const Progress = () => {
           </div>
         );
     }
-  }
+  };
+
 
   return (
       <div className="App">

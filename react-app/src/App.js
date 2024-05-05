@@ -5,7 +5,7 @@ import NoPage from './pages/NoPage';
 import Progress from './pages/Progress';
 import Train from './pages/Train';
 import DataPrep from './pages/DataPrep';
-import Saved from './pages/Saved'
+import Saved from './pages/Saved';
 
 const App = () => {
   return (

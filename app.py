@@ -33,6 +33,58 @@ n_head = 8  # 8 take way too long
 n_layer = 8  # 8
 dropout = 0.2
 
+# Define the path where uploaded files will be stored
+UPLOAD_FOLDER = "data/files/"
+os.makedirs(UPLOAD_FOLDER, exist_ok=True)
+
+
+# data-extract.py
+class FileProcessor:
+    def __init__(self, folder_path):
+        self.folder_path = folder_path
+        self.vocab = set()
+
+    def xz_files_in_dir(self):
+        """List .xz or .txt files in a directory."""
+        files = []
+        for filename in os.listdir(self.folder_path):
+            if (
+                filename.endswith(".xz") or filename.endswith(".txt")
+            ) and os.path.isfile(os.path.join(self.folder_path, filename)):
+                files.append(filename)
+        return files
+
+    def process_text_files(
+        self, output_file_train, output_file_val, vocab_file, train_file_percentage
+    ):
+        """Process text and .xz files, split into training and validation, update vocabulary."""
+        files = self.xz_files_in_dir()
+        total_files = len(files)
+        split_index = int(total_files * train_file_percentage)  # 90% for training
+        files_train = files[:split_index]
+        files_val = files[split_index:]
+
+        with open(output_file_train, "w", encoding="utf-8") as outfile:
+            for filename in files_train:
+                file_path = os.path.join(self.folder_path, filename)
+                with open(file_path, "rt", encoding="utf-8") as infile:
+                    text = infile.read()
+                    outfile.write(text)
+                    self.vocab.update(set(text))
+
+        with open(output_file_val, "w", encoding="utf-8") as outfile:
+            for filename in files_val:
+                file_path = os.path.join(self.folder_path, filename)
+                with open(file_path, "rt", encoding="utf-8") as infile:
+                    text = infile.read()
+                    outfile.write(text)
+                    self.vocab.update(set(text))
+
+        with open(vocab_file, "w", encoding="utf-8") as vfile:
+            for char in self.vocab:
+                vfile.write(char + "\n")
+
+
 torch.manual_seed(
     1337
 )  # when you set a random seed, it means that each time you run your program, you will get the same sequence of random numbers.
@@ -59,54 +111,6 @@ encode = lambda s: [stoi[c] for c in s]  # encoder: take a string, output a list
 decode = lambda l: "".join(
     [itos[i] for i in l]
 )  # decoder: take list of integers, output a string
-
-# Define the path where uploaded files will be stored
-UPLOAD_FOLDER = "data/files/"
-os.makedirs(UPLOAD_FOLDER, exist_ok=True)
-
-
-class FileProcessor:
-    def __init__(self, folder_path):
-        self.folder_path = folder_path
-        self.vocab = set()
-
-    def xz_files_in_dir(self):
-        """List .xz or .txt files in a directory."""
-        files = []
-        for filename in os.listdir(self.folder_path):
-            if (
-                filename.endswith(".xz") or filename.endswith(".txt")
-            ) and os.path.isfile(os.path.join(self.folder_path, filename)):
-                files.append(filename)
-        return files
-
-    def process_text_files(self, output_file_train, output_file_val, vocab_file):
-        """Process text and .xz files, split into training and validation, update vocabulary."""
-        files = self.xz_files_in_dir()
-        total_files = len(files)
-        split_index = int(total_files * 0.9)  # 90% for training
-        files_train = files[:split_index]
-        files_val = files[split_index:]
-
-        with open(output_file_train, "w", encoding="utf-8") as outfile:
-            for filename in files_train:
-                file_path = os.path.join(self.folder_path, filename)
-                with open(file_path, "rt", encoding="utf-8") as infile:
-                    text = infile.read()
-                    outfile.write(text)
-                    self.vocab.update(set(text))
-
-        with open(output_file_val, "w", encoding="utf-8") as outfile:
-            for filename in files_val:
-                file_path = os.path.join(self.folder_path, filename)
-                with open(file_path, "rt", encoding="utf-8") as infile:
-                    text = infile.read()
-                    outfile.write(text)
-                    self.vocab.update(set(text))
-
-        with open(vocab_file, "w", encoding="utf-8") as vfile:
-            for char in self.vocab:
-                vfile.write(char + "\n")
 
 
 # memory map for using small snippets of text from a single file of any size
@@ -333,7 +337,32 @@ def train_model():
     old_stdout = sys.stdout
     sys.stdout = output = io.StringIO()
     try:
-        print(device)
+        print("PARAM: Hyperparameters used for this training: ")
+        print(f"PARAM: Batch Size: {batch_size}")
+        print(f"PARAM: Block Size: {block_size}")
+        print(f"PARAM: Max Iterations: {max_iters}")
+        print(f"PARAM: Evaluation Interval: {eval_interval}")
+        print(f"PARAM: Learning Rate: {learning_rate}")
+        print(f"PARAM: Device: {device}")
+        print(f"PARAM: Evaluation Iterations: {eval_iters}")
+        print(f"PARAM: Number of Embeddings: {n_embd}")
+        print(f"PARAM: Number of Heads: {n_head}")
+        print(f"PARAM: Number of Layers: {n_layer}")
+        print(f"PARAM: Dropout Rate: {dropout}")
+
+        print("LOG: Hyperparameters used for this training: ")
+        print(f"LOG: Batch Size: {batch_size}")
+        print(f"LOG: Block Size: {block_size}")
+        print(f"LOG: Max Iterations: {max_iters}")
+        print(f"LOG: Evaluation Interval: {eval_interval}")
+        print(f"LOG: Learning Rate: {learning_rate}")
+        print(f"LOG: Device: {device}")
+        print(f"LOG: Evaluation Iterations: {eval_iters}")
+        print(f"LOG: Number of Embeddings: {n_embd}")
+        print(f"LOG: Number of Heads: {n_head}")
+        print(f"LOG: Number of Layers: {n_layer}")
+        print(f"LOG: Dropout Rate: {dropout}")
+
         # Setup the training configuration
         optimizer = torch.optim.AdamW(model.parameters(), lr=learning_rate)
         for iter in range(max_iters):
@@ -347,15 +376,20 @@ def train_model():
             if iter % eval_iters == 0:
                 losses = estimate_loss()
                 print(
-                    f"step {iter}, train loss {losses['train']:.3f}, validation loss {losses['val']:.3f}, model loss {loss:.3f}"
+                    f"RESULT: step {iter}, train loss {losses['train']:.3f}, validation loss {losses['val']:.3f}, model loss {loss:.3f}"
+                )
+                print(
+                    f"LOG: step {iter}, train loss {losses['train']:.3f}, validation loss {losses['val']:.3f}, model loss {loss:.3f}"
                 )
 
-            print(loss.item())
+            print(f"RESULT: {loss.item()}")
+            print(f"LOG: {loss.item()}")
 
         #  it serializes the trained model and writes it to the file
+        
         with open("model/model-01.pk1", "wb") as f:
             pickle.dump(model, f)  # dump = save
-        print("model saved")
+        print("LOG: model saved")
 
         # generate from the models
         def generate_text():
@@ -365,22 +399,16 @@ def train_model():
             )
             return generated_chars
 
+        print("SAMPLE_BLOCK_START")
         print(generate_text())
+        print("SAMPLE_BLOCK_END")
     finally:
         # Restore stdout
         sys.stdout = old_stdout
     return output.getvalue()
 
 
-def prepare_data(files):
-    for file in files:
-        filename = file.filename
-        # Optionally, save the files to a server directory if needed
-        file.save(os.path.join("data/files/", filename))
-        # Process each file if needed right here or after saving
-        print(f"Processed {filename}")
-
-
+# Data Preperation route
 @app.route("/upload-files", methods=["POST"])
 def handle_files():
     files = request.files.getlist("files")
@@ -392,23 +420,34 @@ def handle_files():
             file.save(os.path.join(UPLOAD_FOLDER, filename))
 
         # Process the files using FileProcessor
+        train_file_percentage = 0.9
+        val_file_percentage = 1 - train_file_percentage
+        output_file_train = "data/train_test.txt"
+        output_file_val = "data/val_test.txt"
+        vocab_file = "data/vocab_test.txt"
         processor = FileProcessor(UPLOAD_FOLDER)
         processor.process_text_files(
-            "data/train_test.txt", "data/val_test.txt", "data/vocab_test.txt"
+            output_file_train, output_file_val, vocab_file, train_file_percentage
         )
 
         # Prepare the data to send back
-        with open("data/vocab_test.txt", "r", encoding="utf-8") as f:
+        with open(vocab_file, "r", encoding="utf-8") as f:
             vocab = f.read()
-        with open("data/train_test.txt", "r", encoding="utf-8") as f:
+        with open(output_file_train, "r", encoding="utf-8") as f:
             train_length = len(f.read())
-        with open("data/val_test.txt", "r", encoding="utf-8") as f:
+        with open(output_file_val, "r", encoding="utf-8") as f:
             val_length = len(f.read())
 
         return (
             jsonify(
                 {
                     "message": f"{len(files)} files processed successfully",
+                    "upload_folder": UPLOAD_FOLDER,
+                    "train_file_percentage": train_file_percentage * 100,
+                    "val_file_percentage": val_file_percentage * 100,
+                    "ouput_file_val": output_file_val,
+                    "output_file_train": output_file_train,
+                    "vocab_file": vocab_file,
                     "vocab": list(set(vocab)),
                     "uploadedFiles": [file.filename for file in files],
                     "vocabLength": len(set(vocab)),
@@ -422,6 +461,19 @@ def handle_files():
         return jsonify({"error": str(e)}), 500
 
 
+# Progress route
+@app.route("/model-train", methods=["POST"])
+def model_train_endpoint():
+    def generate():
+        output = train_model()
+        for line in output.splitlines():
+            yield line + "\n"
+            time.sleep(0.5)  # Simulate delay for streaming
+
+    return Response(stream_with_context(generate()), mimetype="text/plain")
+
+
+# Chat route
 @app.route("/stream", methods=["POST"])
 def stream_chat():
     data = request.get_json()  # Get JSON data sent from the client
@@ -441,17 +493,6 @@ def stream_chat():
             time.sleep(0.05)  # Delay to simulate typing
 
     return Response(stream_with_context(generate_stream()), mimetype="text/plain")
-
-
-@app.route("/model-train", methods=["POST"])
-def model_train_endpoint():
-    def generate():
-        output = train_model()
-        for line in output.splitlines():
-            yield line + "\n"
-            time.sleep(0.5)  # Simulate delay for streaming
-
-    return Response(stream_with_context(generate()), mimetype="text/plain")
 
 
 if __name__ == "__main__":

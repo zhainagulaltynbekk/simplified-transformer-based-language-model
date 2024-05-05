@@ -4,7 +4,8 @@ import home from '../images/home.png';
 import saved from '../images/saved.png';
 import rocket from '../images/rocket.png';
 import progress from '../images/progress.png';
-import dataPrep from '../images/data-prep.png'
+import dataPrep from '../images/data-prep.png';
+import axios from 'axios';
 import { useState } from 'react';
 
 
@@ -33,12 +34,32 @@ const Train = () => {
     setFormData(prev => ({ ...prev, file: e.target.files[0] }));
   };
   
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {  // Mark the function as async
     e.preventDefault();
-    // Here you would typically handle the submission to the backend
-    console.log(formData);
-    alert('Form submitted. Check the console for data.');
+    const completeFormData = {
+        ...formData,
+        batch_size: formData.batch_size || '32',
+        block_size: formData.block_size || '128',
+        max_iters: formData.max_iters || '10',
+        eval_interval: formData.eval_interval || '100',
+        learning_rate: formData.learning_rate || '3e-4',
+        device: formData.device || 'cpu',
+        eval_iters: formData.eval_iters || '1',
+        n_embd: formData.n_embd || '384',
+        n_head: formData.n_head || '8',
+        n_layer: formData.n_layer || '8',
+        dropout: formData.dropout || '0.2',
+    };
+    try {
+        const response = await axios.post('http://localhost:5000/submit-form', completeFormData);
+        alert('Form submitted successfully!');
+        console.log('Server response:', response.data);
+    } catch (error) {
+        alert('Failed to submit form!');
+        console.error('Error:', error);
+    }
   };
+
   return (
       <div className="App">
         <div className='sideBar'>
