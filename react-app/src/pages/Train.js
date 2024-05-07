@@ -46,13 +46,31 @@ const Train = () => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    const data = new FormData();
+    // Append all text-based inputs to the FormData object from state
+    Object.entries(formData).forEach(([key, value]) => {
+        if (key !== 'file') {
+            data.append(key, value);
+        } else if (value) { // Only append file if it's not null
+            data.append('file', value, value.name); // Include the file name
+        }
+    });
+
     try {
-      await axios.post('http://localhost:5000/submit-form', formData);
-      setSubmittedData(formData);  // Set submittedData to formData on successful submit
-      alert('Form submitted successfully!');
+        const response = await axios.post('http://localhost:5000/submit-form', data, {
+            headers: {
+                'Content-Type': 'multipart/form-data'
+            }
+        });
+        const responseData = {
+            ...formData,
+            fileName: formData.file ? formData.file.name : null
+        };
+        setSubmittedData(responseData);
+        alert('Form submitted successfully!');
     } catch (error) {
-      alert('Failed to submit form!');
-      console.error('Error:', error);
+        alert('Failed to submit form!');
+        console.error('Error:', error);
     }
   };
 
@@ -148,6 +166,9 @@ const Train = () => {
               {Object.entries(submittedData).map(([key, value]) => (
                 key !== 'file' ? <div className='data-info' key={key}>{`${key}: ${value}`}</div> : null
               ))}
+              <div className='data-info'>
+                {submittedData.fileName ? `File chosen: ${submittedData.fileName}` : "Model is not given, default model in model/ will be used or the new one will be created."}
+              </div>
             </div>
           )}
         </div>
