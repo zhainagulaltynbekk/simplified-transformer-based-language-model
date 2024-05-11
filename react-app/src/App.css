@@ -615,3 +615,31 @@ input[type="file"] {
     display: flex; /* Use flex to align the date */
     justify-content: space-between; /* Aligns the date to the left and borders to the edges */
 }
+
+.bigram-table {
+    margin-top: 10px;
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(30px, 1fr));
+    gap: 1px; /* Small gap between cells */
+    overflow: auto; /* For scrolling */
+}
+
+.bigram-cell {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    border: 1px solid #ddd;
+    font-size: 10px;
+    color: black; 
+    padding: 5px;
+}
+
+.bigram-label {
+    font-weight: bold;
+}
+
+.bigram-count {
+    opacity: 0.75;
+}
+

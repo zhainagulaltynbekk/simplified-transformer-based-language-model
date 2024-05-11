@@ -495,6 +495,17 @@ def handle_files():
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
+@app.route('/get_bigrams')
+def get_bigrams():
+    # Assuming 'itos' and 'N' are defined as per your Python script
+    itos = {i: chr(97 + i) for i in range(26)}  # Example: Map indices to letters
+    N = torch.randint(0, 10, (26, 26))  # Example bigram frequency matrix
+
+    bigrams = [
+        {'bigram': f'{itos[i]}{itos[j]}', 'count': int(N[i, j])}
+        for i in range(26) for j in range(26)
+    ]
+    return jsonify(bigrams)
 
 @app.route("/submit-form", methods=["POST"])
 def handle_form_submission():

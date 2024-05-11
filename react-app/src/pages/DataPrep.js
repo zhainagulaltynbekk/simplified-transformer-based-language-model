@@ -12,6 +12,8 @@ const DataPrep = () => {
     const [result, setResult] = useState(null);
     const [currentDate, setCurrentDate] = useState('');
     const [uploadTime, setUploadTime] = useState('');
+    const [bigrams, setBigrams] = useState([]);
+    const [maxCount, setMaxCount] = useState(0);
 
     useEffect(() => {
         // Get the current date in the desired format
@@ -21,7 +23,33 @@ const DataPrep = () => {
             month: 'long',
             day: 'numeric'
         }));
+
+        fetch('http://localhost:5000/get_bigrams')
+            .then(response => response.json())
+            .then(data => {
+                setBigrams(data);
+                const max = Math.max(...data.map(item => item.count));
+                setMaxCount(max);
+            })
+            .catch(error => console.error('Error fetching data: ', error));
     }, []);
+
+    function interpolateColor(color1, color2, factor) {
+        if (arguments.length < 3) { 
+            factor = 0.5; // default to midpoint
+        }
+        var result = color1.slice(1).match(/.{2}/g)
+            .map(hex => parseInt(hex, 16))
+            .map((part, i) => Math.round(part + factor * (parseInt(color2.slice(1).match(/.{2}/g)[i], 16) - part)));
+    
+        return `rgb(${result.join(',')})`;
+    }    
+
+    // Function to determine the color based on count
+    function getColor(count, maxCount) {
+        const factor = count / maxCount; // Normalize the factor based on the max count
+        return interpolateColor('#f0f5f9', '#01277e', factor);
+    }
 
     const handleFileChange = (event) => {
         setFiles([...event.target.files]);
@@ -141,6 +169,18 @@ const DataPrep = () => {
                                     ))}
                                 </tbody>
                             </table>
+                            <div className="bigram-table">
+                                {bigrams.length > 0 ? (
+                                    bigrams.map((item, index) => (
+                                        <div key={index} className="bigram-cell" style={{ backgroundColor: getColor(item.count, maxCount) }}>
+                                            <div className="bigram-label">{item.bigram}</div>
+                                            <div className="bigram-count">{item.count}</div>
+                                        </div>
+                                    ))
+                                ) : (
+                                    <p>No bigram data available.</p>
+                                )}
+                            </div>
                         </div>
                     ) : (
                         <p>No results to display. Upload files to see results here.</p>
