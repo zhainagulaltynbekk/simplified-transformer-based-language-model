@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { NavLink } from 'react-router-dom';
+import chat from '../images/chat.png';
 import home from '../images/home.png';
-import saved from '../images/saved.png';
 import rocket from '../images/rocket.png';
 import progress from '../images/progress.png';
 import dataPrep from '../images/data-prep.png';
@@ -14,6 +14,7 @@ const DataPrep = () => {
     const [uploadTime, setUploadTime] = useState('');
     const [bigrams, setBigrams] = useState([]);
     const [maxCount, setMaxCount] = useState(0);
+    const [isLoading, setIsLoading] = useState(false);
 
     useEffect(() => {
         // Get the current date in the desired format
@@ -23,33 +24,7 @@ const DataPrep = () => {
             month: 'long',
             day: 'numeric'
         }));
-
-        fetch('http://localhost:5000/get_bigrams')
-            .then(response => response.json())
-            .then(data => {
-                setBigrams(data);
-                const max = Math.max(...data.map(item => item.count));
-                setMaxCount(max);
-            })
-            .catch(error => console.error('Error fetching data: ', error));
     }, []);
-
-    function interpolateColor(color1, color2, factor) {
-        if (arguments.length < 3) { 
-            factor = 0.5; // default to midpoint
-        }
-        var result = color1.slice(1).match(/.{2}/g)
-            .map(hex => parseInt(hex, 16))
-            .map((part, i) => Math.round(part + factor * (parseInt(color2.slice(1).match(/.{2}/g)[i], 16) - part)));
-    
-        return `rgb(${result.join(',')})`;
-    }    
-
-    // Function to determine the color based on count
-    function getColor(count, maxCount) {
-        const factor = count / maxCount; // Normalize the factor based on the max count
-        return interpolateColor('#f0f5f9', '#01277e', factor);
-    }
 
     const handleFileChange = (event) => {
         setFiles([...event.target.files]);
@@ -58,6 +33,7 @@ const DataPrep = () => {
     const handleSubmit = async (event) => {
         event.preventDefault();
         if (files.length > 0) {
+            setIsLoading(true); // Start loading
             const formData = new FormData();
             for (const file of files) {
                 formData.append('files', file);
@@ -69,7 +45,16 @@ const DataPrep = () => {
                 });
                 const data = await response.json();
                 setResult(data);
-                // Set the upload time to now
+                console.log(data);
+
+                if (data.bigrams && Array.isArray(data.bigrams)) {
+                    setBigrams(data.bigrams);
+                    setMaxCount(data.bigrams.length > 0 ? Math.max(...data.bigrams.map(b => b.count)) : 0);
+                } else {
+                    setBigrams([]);
+                    setMaxCount(0);
+                }
+
                 const now = new Date();
                 setUploadTime(now.toLocaleTimeString('en-US', {
                     hour: '2-digit',
@@ -78,15 +63,36 @@ const DataPrep = () => {
                     hour12: true
                 }));
             } catch (error) {
+                console.error('Failed to send files:', error);
                 alert(`Failed to send files: ${error}`);
-                setResult(null); // Clear previous results if the fetch fails
+                setResult(null);
+                setBigrams([]);
+                setMaxCount(0);
+            } finally {
+                setIsLoading(false); // End loading
             }
         } else {
             alert('Please select files first.');
         }
     };
 
-    const columnsPerRow = 35;
+    const interpolateColor = (color1, color2, factor) => {
+        let result = color1.slice(1).match(/.{2}/g)
+            .map(hex => parseInt(hex, 16))
+            .map((part, i) => {
+                const part2 = parseInt(color2.slice(1).match(/.{2}/g)[i], 16);
+                return Math.round(part + factor * (part2 - part));
+            });
+        return `rgb(${result.join(',')})`;
+    };
+
+    const getColor = (count) => {
+        const logMax = Math.log(maxCount + 1); // Avoid log(0) which is undefined
+        const factor = Math.log(count + 1) / logMax; // Logarithmic scale, adding 1 to avoid log(0)
+        return interpolateColor('#f0f5f9', '#01277e', factor);
+    };
+
+    const columnsPerRow = 45;
 
     // Helper function to chunk the vocabulary array
     const chunkArray = (array, size) => {
@@ -101,11 +107,11 @@ const DataPrep = () => {
         <div className="App">
             <div className='sideBar'>
                 <div className='upperSide'>
-                    <NavLink to="/" className={({ isActive }) => isActive ? 'listItems activeLink' : 'listItems'} end>
-                        <img src={home} alt='chat' className='listItemsImg' />Chat
+                    <NavLink to="/" className={({ isActive }) => isActive ? 'listItems activeLink' : 'listItems'}>
+                        <img src={home} alt='home' className='listItemsImg' />Home
                     </NavLink>
-                    <NavLink to="/saved" className={({ isActive }) => isActive ? 'listItems activeLink' : 'listItems'}>
-                        <img src={saved} alt='saved' className='listItemsImg' />Saved
+                    <NavLink to="/chat" className={({ isActive }) => isActive ? 'listItems activeLink' : 'listItems'} end>
+                        <img src={chat} alt='chat' className='listItemsImg' />Chat
                     </NavLink>
                     <NavLink to="/data-prep" className={({ isActive }) => isActive ? 'listItems activeLink' : 'listItems'}>
                         <img src={dataPrep} alt='data preperation' className='listItemsImg' />Data Preperation
@@ -137,7 +143,9 @@ const DataPrep = () => {
                         <span className="data-date">{currentDate}</span>
                         <div className="border-edge"></div>
                     </div>
-                    {result ? (
+                    {isLoading ? (
+                        <p>Loading...</p>
+                    ) : result ? (
                         <div>
                             <h3 className='data-title-first'>Uploaded Files</h3>
                             <p className='data-info'>{result.message}:<span className="upload-time">{uploadTime}</span></p>
@@ -169,15 +177,15 @@ const DataPrep = () => {
                                     ))}
                                 </tbody>
                             </table>
+                            <h3 className='data-title'>Bigrams</h3>
+                            <p className='data-info'>{result.bigram_len} bigrams are in the below table: </p>
                             <div className="bigram-table">
-                                {bigrams.length > 0 ? (
-                                    bigrams.map((item, index) => (
-                                        <div key={index} className="bigram-cell" style={{ backgroundColor: getColor(item.count, maxCount) }}>
-                                            <div className="bigram-label">{item.bigram}</div>
-                                            <div className="bigram-count">{item.count}</div>
-                                        </div>
-                                    ))
-                                ) : (
+                                {bigrams.length > 0 ? bigrams.map((item, index) => (
+                                    <div key={index} className="bigram-cell" style={{ backgroundColor: getColor(item.count) }}>
+                                        <div className="bigram-label">{item.bigram}</div>
+                                        <div className="bigram-count">{item.count}</div>
+                                    </div>
+                                )) : (
                                     <p>No bigram data available.</p>
                                 )}
                             </div>

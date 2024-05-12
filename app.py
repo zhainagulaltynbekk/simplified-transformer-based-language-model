@@ -18,8 +18,10 @@ from flask_cors import CORS
 import os
 import time
 import lzma
+import numpy as np
 from tqdm import tqdm
 from werkzeug.utils import secure_filename
+import matplotlib.pyplot as plt
 
 
 # batch_size = 32  # 64 how many independent sequences will we process in parallel?
@@ -65,6 +67,8 @@ class FileProcessor:
     def __init__(self, folder_path):
         self.folder_path = folder_path
         self.vocab = set()
+        self.characters = []
+        self.bigrams = {}
 
     def xz_files_in_dir(self):
         """List .xz or .txt files in a directory."""
@@ -93,6 +97,7 @@ class FileProcessor:
                     text = infile.read()
                     outfile.write(text)
                     self.vocab.update(set(text))
+                    self.characters = list(text)
 
         with open(output_file_val, "w", encoding="utf-8") as outfile:
             for filename in files_val:
@@ -101,10 +106,65 @@ class FileProcessor:
                     text = infile.read()
                     outfile.write(text)
                     self.vocab.update(set(text))
+                    self.characters.extend(list(text))
 
         with open(vocab_file, "w", encoding="utf-8") as vfile:
             for char in self.vocab:
                 vfile.write(char + "\n")
+
+        # bigram
+        self.compute_bigrams()
+
+    def compute_bigrams(self):
+        """Compute bigrams from the accumulated character list."""
+        characters_set = set(self.characters)
+        characters_set_len = len(characters_set)
+        for ch1, ch2 in zip(self.characters, self.characters[1:]):
+            bigram = (ch1, ch2)
+            self.bigrams[bigram] = self.bigrams.get(bigram, 0) + 1
+
+        bigrams_len = len(sorted(self.bigrams.items(), key=lambda kv: -kv[1]))
+        print(bigrams_len)
+
+        N = torch.zeros((characters_set_len, characters_set_len), dtype=torch.int32)
+
+        sorted_characters_list = sorted(list(characters_set))
+        bigram_stoi = {s: i for i, s in enumerate(sorted_characters_list)}
+        bigram_itos = {i: s for s, i in bigram_stoi.items()}
+
+        for ch1, ch2 in zip(self.characters, self.characters[1:]):
+            if (
+                ch1 in bigram_stoi and ch2 in bigram_stoi
+            ):  # Check if both characters are in the vocabulary
+                ix1 = bigram_stoi[ch1]
+                ix2 = bigram_stoi[ch2]
+                if ix1 >= len(sorted_characters_list) or ix2 >= len(
+                    sorted_characters_list
+                ):
+                    print(
+                        f"Index out of bounds for characters: {ch1}, {ch2}, Indices: {ix1}, {ix2}"
+                    )
+                else:
+                    N[ix1, ix2] += 1
+            else:
+                print(
+                    f"Unseen characters: {ch1}, {ch2}"
+                )  # Debugging print for unseen characters
+
+        self.bigrams = {
+            (bigram_itos[i], bigram_itos[j]): N[i, j].item()
+            for i in range(len(sorted_characters_list))
+            for j in range(len(sorted_characters_list))
+        }
+
+    def get_bigrams(self):
+        """Returns the computed bigram data."""
+        bigram_list = [
+            {"bigram": f"{ch1}{ch2}", "count": count}
+            for (ch1, ch2), count in self.bigrams.items()
+            if count > 0
+        ]
+        return bigram_list
 
 
 torch.manual_seed(
@@ -460,11 +520,14 @@ def handle_files():
         output_file_train = "data/train_test.txt"
         output_file_val = "data/val_test.txt"
         vocab_file = "data/vocab_test.txt"
+        app.logger.info("Starting file processing...")
         processor = FileProcessor(UPLOAD_FOLDER)
         processor.process_text_files(
             output_file_train, output_file_val, vocab_file, train_file_percentage
         )
 
+        bigrams = processor.get_bigrams()
+        app.logger.info("File processing completed successfully.")
         # Prepare the data to send back
         with open(vocab_file, "r", encoding="utf-8") as f:
             vocab = f.read()
@@ -488,24 +551,16 @@ def handle_files():
                     "vocabLength": len(set(vocab)),
                     "trainLength": train_length,
                     "valLength": val_length,
+                    "bigrams": bigrams,
+                    "bigram_len": len(bigrams),
                 }
             ),
             200,
         )
     except Exception as e:
+        app.logger.error(f"Error processing files: {e}")
         return jsonify({"error": str(e)}), 500
 
-@app.route('/get_bigrams')
-def get_bigrams():
-    # Assuming 'itos' and 'N' are defined as per your Python script
-    itos = {i: chr(97 + i) for i in range(26)}  # Example: Map indices to letters
-    N = torch.randint(0, 10, (26, 26))  # Example bigram frequency matrix
-
-    bigrams = [
-        {'bigram': f'{itos[i]}{itos[j]}', 'count': int(N[i, j])}
-        for i in range(26) for j in range(26)
-    ]
-    return jsonify(bigrams)
 
 @app.route("/submit-form", methods=["POST"])
 def handle_form_submission():
