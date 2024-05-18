@@ -5,6 +5,11 @@ import mmap
 import random
 import pickle  # instead of torch.load and torch.save
 import argparse
+import numpy as np
+from sklearn.metrics import confusion_matrix, accuracy_score
+import seaborn
+import pandas as pd
+import matplotlib.pyplot as plt
 
 # hyperparameters
 # parser = argparse.ArgumentParser(description="For argument values!")
@@ -102,7 +107,7 @@ def get_batch(split):
 
 
 @torch.no_grad()  # PyTorch will make sure not to use gradients here
-def estimate_loss():
+def estimate_loss(model):
     out = {}
     model.eval()  # puts the model on an evaluation mode
     for split in ["train", "val"]:
@@ -272,48 +277,70 @@ class GPTLanguageModel(nn.Module):
         return idx
 
 
-model = GPTLanguageModel(vocab_size)
-# if you don't have your model make sure to comment this part before you create your model!
-# with this we will be able to train our model  multiple times
-print("loading model parameters ...")
-with open("model/model-01.pk1", "rb") as f:
-    model = pickle.load(f)
-print("loaded successfully!")
-m = model.to(device)
+def main():
+    model = GPTLanguageModel(vocab_size)
+    # if you don't have your model make sure to comment this part before you create your model!
+    # with this we will be able to train our model  multiple times
+    print("loading model parameters ...")
+    with open("model/model-01.pk1", "rb") as f:
+        model = pickle.load(f)
+    print("loaded successfully!")
+    m = model.to(device)
 
-# create a PyTorch optimizer
-optimizer = torch.optim.AdamW(model.parameters(), lr=learning_rate)
+    # create a PyTorch optimizer
+    optimizer = torch.optim.AdamW(model.parameters(), lr=learning_rate)
 
-for iter in range(max_iters):
+    for iter in range(max_iters):
+        # sample a batch of data
+        xb, yb = get_batch("train")
 
-    # sample a batch of data
-    xb, yb = get_batch("train")
+        # evaluate the loss
+        logits, loss = model.forward(xb, yb)
+        optimizer.zero_grad(set_to_none=True)
+        loss.backward()
+        optimizer.step()  # neuron get updated ????
+        # every once in a while evaluate the loss on train and val sets
+        if iter % eval_iters == 0:
+            losses = estimate_loss(model)
+            print(
+                f"step {iter}, train loss {losses['train']:.3f}, validation loss {losses['val']:.3f}, model loss {loss:.3f}"
+            )
+            xt, yt = get_batch("val")
+            y_predicted = model.generate(xt, max_new_tokens=2)[:, xt.shape[1] :]
+            # y_predicted = decode(y_predicted)
+            # yt = decode(y)
+            accuracy_ = accuracy_score(yt[:, :2].flatten(), y_predicted.flatten())
+            print(accuracy_)
+            accuracy = np.sum((yt[:, :2] == y_predicted).numpy()) / (len(yt) * 2)
+            print(f"LOG: accuracy: {accuracy}")
 
-    # evaluate the loss
-    logits, loss = model.forward(xb, yb)
-    optimizer.zero_grad(set_to_none=True)
-    loss.backward()
-    optimizer.step()  # neuron get updated ????
-    # every once in a while evaluate the loss on train and val sets
-    if iter % eval_iters == 0:
-        losses = estimate_loss()
-        print(
-            f"step {iter}, train loss {losses['train']:.3f}, validation loss {losses['val']:.3f}, model loss {loss:.3f}"
-        )
+        xt, yt = get_batch("val")
+        y_predicted = model.generate(xt, max_new_tokens=2)[:, xt.shape[1] :]
 
-print(loss.item())
+        cm = confusion_matrix(yt[:, :2].flatten(), y_predicted.flatten())
+        labels = np.unique(np.concatenate((yt[:, :2], y_predicted)))
+        cm_df = pd.DataFrame(cm, index=labels, columns=labels)
+        cm_plot = seaborn.heatmap(cm_df, annot=True, cmap="Blues")
+        cm_plot.set_xlabel("Predicted Values")
+        cm_plot.set_ylabel("Actual Values")
+        cm_plot.set_title("Confusion Matrix", size=16)
+        # plt.show()
 
-#  it serializes the trained model and writes it to the file
-with open("model/model-01.pk1", "wb") as f:
-    pickle.dump(model, f)  # dump = save
-print("model saved")
+    print(loss.item())
+
+    #  it serializes the trained model and writes it to the file
+    with open("model/model-01.pk1", "wb") as f:
+        pickle.dump(model, f)  # dump = save
+    print("model saved")
+
+    # generate from the models
+    def generate_text():
+        context = torch.zeros((1, 1), dtype=torch.long, device=device)
+        generated_chars = decode(m.generate(context, max_new_tokens=500)[0].tolist())
+        return generated_chars
+
+    print(generate_text())
 
 
-# generate from the models
-def generate_text():
-    context = torch.zeros((1, 1), dtype=torch.long, device=device)
-    generated_chars = decode(m.generate(context, max_new_tokens=500)[0].tolist())
-    return generated_chars
-
-
-print(generate_text())
+if __name__ == "__main__":
+    main()

@@ -5,7 +5,6 @@ import chat from '../images/chat.png';
 import rocket from '../images/rocket.png';
 import progress from '../images/progress.png';
 import dataPrep from '../images/data-prep.png';
-import axios from 'axios';
 import { useState, useEffect } from 'react';
 
 const Train = () => {  
@@ -40,9 +39,17 @@ const Train = () => {
     setFormData(prev => ({ ...prev, [name]: value }));
   };
 
+
   const handleFileChange = (e) => {
-    setFormData(prev => ({ ...prev, file: e.target.files[0] }));
+    const file = e.target.files[0];
+    const fileExtension = file.name.split('.').pop();
+    if (fileExtension !== 'pk1') {
+      alert('Please select a file with a .pk1 extension');
+      return; // Prevent setting the file
+    }
+    setFormData(prev => ({ ...prev, file }));
   };
+  
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -57,11 +64,6 @@ const Train = () => {
     });
 
     try {
-        const response = await axios.post('http://localhost:5000/submit-form', data, {
-            headers: {
-                'Content-Type': 'multipart/form-data'
-            }
-        });
         const responseData = {
             ...formData,
             fileName: formData.file ? formData.file.name : null
@@ -149,8 +151,9 @@ const Train = () => {
             </div>
             <div className='form-item'>
               <label className='label'>Model File</label>
-              <input className='form-file' type="file" onChange={handleFileChange} />
+              <input className='form-file' type="file" accept='.pk1' onChange={handleFileChange} />
             </div>
+
           </div>
           <button type="submit" className='form-btn'>Submit</button>
         </form>

@@ -476,6 +476,14 @@ def train_model():
                 print(
                     f"LOG: step {iter}, train loss {losses['train']:.3f}, validation loss {losses['val']:.3f}, model loss {loss:.3f}"
                 )
+                xt, yt = get_batch("val")
+                generated_idx = model.generate(xt.unsqueeze(0), max_new_tokens=150)[0]
+
+                # Determine where the new text starts by skipping the input context length
+                y_predicted = generated_idx.tolist()[len(xt) :]
+                y_predicted = decode(y_predicted)
+                accuracy = np.sum(yt == y_predicted) / len(yt)
+                print(f"LOG: accuracy: {accuracy}")
 
             print(f"RESULT: {loss.item()}")
             print(f"LOG: {loss.item()}")
