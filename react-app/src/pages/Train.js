@@ -23,7 +23,7 @@ const Train = () => {
     dropout: '0.2',
     file: null
   });
-  const [submittedData, setSubmittedData] = useState(null);  // State to store the submitted data
+  const [submittedData, setSubmittedData] = useState(null);
   const [currentDate, setCurrentDate] = useState('');
 
   useEffect(() => {
@@ -159,6 +159,9 @@ const Train = () => {
             <div className="border-edge"></div>
             <span className="data-date">{currentDate}</span>
             <div className="border-edge"></div>
+          </div>
+          <div className='data-info-train'>
+          Your submitted data:
           </div>
           {submittedData && (
             <div>

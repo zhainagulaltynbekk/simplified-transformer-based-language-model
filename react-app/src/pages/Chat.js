@@ -103,6 +103,70 @@ const Chat = () => {
   const onChangeInputHandler = (e) => {
     setMessage(e.target.value);
   };
+
+  const handleQuery = async (e) => {
+    const date = new Date();
+    const str_time = `${date.getHours().toString().padStart(2, '0')}:${date.getMinutes().toString().padStart(2, '0')}`;
+    
+    const newUserMessage = {
+        text: e.target.value,
+        time: str_time,
+        sender: 'user',
+    };
+
+    // Add user message to state
+    setMessages((prevMessages) => [...prevMessages, newUserMessage]);
+
+    // Initialize a bot message for the spinner
+    let newBotMessage = {
+      text: <img src={spinner} alt="Loading..." className="img-fluid"/>,
+      time: str_time,
+      sender: 'bot',
+    };
+
+    // Add loading spinner as bot message
+    setMessages((prevMessages) => [...prevMessages, newBotMessage]);
+
+    const response = await fetch('http://localhost:5000/stream', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ msg: e.target.value }),
+    });
+
+    const reader = response.body.getReader();
+    let receivedText = '';
+
+    const processText = async ({ done, value }) => {
+      if (done) {
+        console.log('Stream complete');
+        return;
+      }
+      const text = new TextDecoder("utf-8").decode(value);
+      receivedText += text;
+
+      // Update the bot message with new text or remove spinner
+      setMessages((prevMessages) => {
+        const lastMessage = prevMessages[prevMessages.length - 1];
+        if (lastMessage && lastMessage.sender === 'bot') {
+          return [...prevMessages.slice(0, -1), { ...lastMessage, text: receivedText }];
+        } else {
+          return [...prevMessages, {
+            text: receivedText,
+            time: str_time,
+            sender: 'bot',
+          }];
+        }
+      });
+
+      return reader.read().then(processText);
+    };
+
+    reader.read().then(processText).catch(error => {
+      console.error("Failed to read stream", error);
+    });
+  }
   
   return (
       <div className="App">
@@ -153,8 +217,8 @@ const Chat = () => {
         </div>
         <div className="sideBarR">
             <div className='upperSideBottom'>
-              <button className='query'><img src={msgIcon} alt='query'/>What is Programming?</button>
-              <button className='query'><img src={msgIcon} alt='query'/>How to use an API?</button>
+              <button className='query' onClick={handleQuery} value={"Hello! Could you help?"}><img src={msgIcon} alt='query'/>Hello! Could you help?</button>
+              <button className='query' onClick={handleQuery} value={"Thank you for the help!"}><img src={msgIcon} alt='query'/>Thank you for the help!</button>
             </div>
         </div>
       </div>

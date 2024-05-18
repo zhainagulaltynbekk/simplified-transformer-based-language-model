@@ -215,6 +215,11 @@ a{
     border: 1px solid #cbd5e1;
 }
 
+.query:hover {
+    background-color: #c6d8ee; /* Background color when the item is clicked */
+    border: 1px solid #c6d8ee;
+}
+
 .query>img {
     margin-right: 2rem;
     object-fit: cover;
@@ -552,6 +557,15 @@ input[type="file"] {
 }
 
 .data-info {
+    display: flex;
+    justify-content: space-between;
+    font-family:'Courier New', monospace;
+    margin-bottom: 5px;
+    margin-left: 5px;
+}
+
+.data-info-train {
+    margin-left: 3px;
     display: flex;
     justify-content: space-between;
     font-family:'Courier New', monospace;
