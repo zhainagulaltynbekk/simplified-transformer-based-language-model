@@ -1,6 +1,6 @@
 import '../App.css';
 import { NavLink } from 'react-router-dom';
-import home from '../images/home.png';
+// import home from '../images/home.png';
 import chat from '../images/chat.png';
 import rocket from '../images/rocket.png';
 import progress from '../images/progress.png';
@@ -78,10 +78,10 @@ const Train = () => {
     <div className="App">
       <div className='sideBar'>
         <div className='upperSide'>
-          <NavLink to="/" className={({ isActive }) => isActive ? 'listItems activeLink' : 'listItems'}>
+          {/* <NavLink to="/" className={({ isActive }) => isActive ? 'listItems activeLink' : 'listItems'}>
               <img src={home} alt='home' className='listItemsImg' />Home
-          </NavLink>
-          <NavLink to="/chat" className={({ isActive }) => isActive ? 'listItems activeLink' : 'listItems'} end>
+          </NavLink> */}
+          <NavLink to="/" className={({ isActive }) => isActive ? 'listItems activeLink' : 'listItems'} end>
               <img src={chat} alt='chat' className='listItemsImg' />Chat
           </NavLink>
           <NavLink to="/data-prep" className={({ isActive }) => isActive ? 'listItems activeLink' : 'listItems'}>

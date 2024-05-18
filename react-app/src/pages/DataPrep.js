@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { NavLink } from 'react-router-dom';
 import chat from '../images/chat.png';
-import home from '../images/home.png';
+// import home from '../images/home.png';
 import rocket from '../images/rocket.png';
 import progress from '../images/progress.png';
 import dataPrep from '../images/data-prep.png';
@@ -107,10 +107,10 @@ const DataPrep = () => {
         <div className="App">
             <div className='sideBar'>
                 <div className='upperSide'>
-                    <NavLink to="/" className={({ isActive }) => isActive ? 'listItems activeLink' : 'listItems'}>
+                    {/* <NavLink to="/" className={({ isActive }) => isActive ? 'listItems activeLink' : 'listItems'}>
                         <img src={home} alt='home' className='listItemsImg' />Home
-                    </NavLink>
-                    <NavLink to="/chat" className={({ isActive }) => isActive ? 'listItems activeLink' : 'listItems'} end>
+                    </NavLink> */}
+                    <NavLink to="/" className={({ isActive }) => isActive ? 'listItems activeLink' : 'listItems'} end>
                         <img src={chat} alt='chat' className='listItemsImg' />Chat
                     </NavLink>
                     <NavLink to="/data-prep" className={({ isActive }) => isActive ? 'listItems activeLink' : 'listItems'}>
@@ -144,7 +144,7 @@ const DataPrep = () => {
                         <div className="border-edge"></div>
                     </div>
                     {isLoading ? (
-                        <p>Loading...</p>
+                        <p className='data-info'>Loading...</p>
                     ) : result ? (
                         <div>
                             <h3 className='data-title-first'>Uploaded Files</h3>
@@ -191,7 +191,7 @@ const DataPrep = () => {
                             </div>
                         </div>
                     ) : (
-                        <p>No results to display. Upload files to see results here.</p>
+                        <p className='data-info'>No results to display. Upload files to see results here.</p>
                     )}
                 </div>
             </div>

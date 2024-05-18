@@ -49,7 +49,7 @@ a{
     background: #1d283a;
     color: #c8cdd2;
     font-size: 14px;
-    font-family:Arial, Helvetica, sans-serif;
+    font-family:'Courier New', monospace;
     display: flex;
     flex-direction: column;
     justify-content: center;
@@ -497,6 +497,7 @@ input[type="file"] {
 }
 
 .data-table {
+    font-family:'Courier New', monospace;
     margin-top: 10px;
     margin-bottom: 10px;
     width: 100%;
@@ -511,6 +512,7 @@ input[type="file"] {
 }
 
 .data-title {
+    font-family:'Courier New', monospace;
     background-color: #66bcf3;
     color: #fff;
     display: inline-block;
@@ -519,12 +521,13 @@ input[type="file"] {
     padding-bottom: 3px;
     padding-left: 6px;
     padding-right: 6px;
-    border-radius: 10px;
-    margin-bottom: 15px;
-    margin-top: 15px;
+    border-radius: 9px;
+    margin-bottom: 8px;
+    margin-top: 8px;
 }
 
 .data-title-first {
+    font-family:'Courier New', monospace;
     background-color: #66bcf3;
     color: #fff;
     display: inline-block;
@@ -533,16 +536,17 @@ input[type="file"] {
     padding-bottom: 3px;
     padding-left: 6px;
     padding-right: 6px;
-    border-radius: 10px;
-    margin-bottom: 15px;
+    border-radius: 9px;
+    margin-bottom: 8px;
 }
 
 .data-files {
-    margin-left: 30px;
+    margin-left: 25px;
 }
 
 .data-file {
     display: flex;
+    font-family:'Courier New', monospace;
     justify-content: space-between;
     margin-bottom: 5px;
 }
@@ -550,7 +554,7 @@ input[type="file"] {
 .data-info {
     display: flex;
     justify-content: space-between;
-    margin-left: 5px;
+    font-family:'Courier New', monospace;
     margin-bottom: 5px;
 }
 
@@ -629,6 +633,7 @@ input[type="file"] {
     justify-content: center;
     align-items: center;
     border: 1px solid #1d283a;
+    font-family:'Courier New', monospace;
     font-size: 9px;
     color: black; 
     padding: 5px;

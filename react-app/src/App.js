@@ -5,18 +5,18 @@ import NoPage from './pages/NoPage';
 import Progress from './pages/Progress';
 import Train from './pages/Train';
 import DataPrep from './pages/DataPrep';
-import Home from './pages/Home';
+// import Home from './pages/Home';
 
 const App = () => {
   return (
     <>
     <BrowserRouter>
       <Routes>
-        <Route index element={<Home/>}></Route>
+        <Route index element={<Chat/>}></Route>
         <Route path='/progress' element={<Progress/>}></Route>
         <Route path='/train' element={<Train/>}></Route>
         <Route path='/data-prep' element={<DataPrep/>}></Route>
-        <Route path='/chat' element={<Chat/>}></Route>
+        {/* <Route path='/chat' element={<Chat/>}></Route> */}
         <Route path='*' element={<NoPage/>}></Route>
       </Routes>
     </BrowserRouter>
