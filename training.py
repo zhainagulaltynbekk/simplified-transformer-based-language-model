@@ -314,19 +314,18 @@ def main():
             accuracy = np.sum((yt[:, :2] == y_predicted).numpy()) / (len(yt) * 2)
             print(f"LOG: accuracy: {accuracy}")
 
-        xt, yt = get_batch("val")
-        y_predicted = model.generate(xt, max_new_tokens=2)[:, xt.shape[1] :]
-
-        cm = confusion_matrix(yt[:, :2].flatten(), y_predicted.flatten())
-        labels = np.unique(np.concatenate((yt[:, :2], y_predicted)))
-        cm_df = pd.DataFrame(cm, index=labels, columns=labels)
-        cm_plot = seaborn.heatmap(cm_df, annot=True, cmap="Blues")
-        cm_plot.set_xlabel("Predicted Values")
-        cm_plot.set_ylabel("Actual Values")
-        cm_plot.set_title("Confusion Matrix", size=16)
-        # plt.show()
-
     print(loss.item())
+    xt, yt = get_batch("val")
+    y_predicted = model.generate(xt, max_new_tokens=2)[:, xt.shape[1] :]
+
+    cm = confusion_matrix(yt[:, :2].flatten(), y_predicted.flatten())
+    labels = np.unique(np.concatenate((yt[:, :2], y_predicted)))
+    cm_df = pd.DataFrame(cm, index=labels, columns=labels)
+    cm_plot = seaborn.heatmap(cm_df, annot=True, cmap="Blues")
+    cm_plot.set_xlabel("Predicted Values")
+    cm_plot.set_ylabel("Actual Values")
+    cm_plot.set_title("Confusion Matrix", size=16)
+    plt.show()
 
     #  it serializes the trained model and writes it to the file
     with open("model/model-01.pk1", "wb") as f:
