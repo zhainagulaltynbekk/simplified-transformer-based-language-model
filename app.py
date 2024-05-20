@@ -25,20 +25,6 @@ import data_extract
 import seaborn
 import pandas as pd
 
-
-# batch_size = 32  # 64 how many independent sequences will we process in parallel?
-# block_size = 128  # what is the maximum context length for prediction?
-# max_iters = 10  # epoch (when user uploads text i can use the data i have to optimize)
-# eval_interval = 100
-# learning_rate = 3e-4
-# device = "cuda" if torch.cuda.is_available() else "cpu"
-# eval_iters = 1
-# n_embd = 384
-# n_head = 8  # 8 take way too long
-# n_layer = 8  # 8
-# dropout = 0.2
-# model_path = "model/model-01.pk1"
-
 # Path for configuration file
 CONFIG_FILE = "configurations/config.json"
 MODEL_DIR = "model/new-model/"
