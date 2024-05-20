@@ -19,8 +19,11 @@ import os
 import time
 import numpy as np
 from werkzeug.utils import secure_filename
+from sklearn.metrics import confusion_matrix, accuracy_score
 import matplotlib.pyplot as plt
 import data_extract
+import seaborn
+import pandas as pd
 
 
 # batch_size = 32  # 64 how many independent sequences will we process in parallel?
@@ -59,8 +62,7 @@ def save_config(config):
 
 config = load_config()
 
-
-# data-extract.py
+# OK
 
 torch.manual_seed(
     1337
@@ -372,16 +374,27 @@ def train_model():
                     f"LOG: step {iter}, train loss {losses['train']:.3f}, validation loss {losses['val']:.3f}, model loss {loss:.3f}"
                 )
                 xt, yt = get_batch("val")
-                generated_idx = model.generate(xt.unsqueeze(0), max_new_tokens=150)[0]
-
-                # Determine where the new text starts by skipping the input context length
-                y_predicted = generated_idx.tolist()[len(xt) :]
-                y_predicted = decode(y_predicted)
-                accuracy = np.sum(yt == y_predicted) / len(yt)
+                y_predicted = model.generate(xt, max_new_tokens=2)[:, xt.shape[1] :]
+                # y_predicted = decode(y_predicted)
+                # yt = decode(y)
+                accuracy_ = accuracy_score(yt[:, :2].flatten(), y_predicted.flatten())
+                print(accuracy_)
+                accuracy = np.sum((yt[:, :2] == y_predicted).numpy()) / (len(yt) * 2)
                 print(f"LOG: accuracy: {accuracy}")
 
             print(f"RESULT: {loss.item()}")
             print(f"LOG: {loss.item()}")
+            xt, yt = get_batch("val")
+            y_predicted = model.generate(xt, max_new_tokens=2)[:, xt.shape[1] :]
+
+            cm = confusion_matrix(yt[:, :2].flatten(), y_predicted.flatten())
+            labels = np.unique(np.concatenate((yt[:, :2], y_predicted)))
+            cm_df = pd.DataFrame(cm, index=labels, columns=labels)
+            cm_plot = seaborn.heatmap(cm_df, annot=True, cmap="Blues")
+            cm_plot.set_xlabel("Predicted Values")
+            cm_plot.set_ylabel("Actual Values")
+            cm_plot.set_title("Confusion Matrix", size=16)
+            # plt.show()
 
         #  it serializes the trained model and writes it to the file
 

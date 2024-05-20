@@ -10,6 +10,9 @@ from sklearn.metrics import confusion_matrix, accuracy_score
 import seaborn
 import pandas as pd
 import matplotlib.pyplot as plt
+import os
+import sys
+import json
 
 # hyperparameters
 # parser = argparse.ArgumentParser(description="For argument values!")
@@ -23,19 +26,40 @@ import matplotlib.pyplot as plt
 # batch_size = int(
 #     args.batch_size
 # )
-batch_size = 32  # 64 how many independent sequences will we process in parallel?
-block_size = 128  # what is the maximum context length for prediction? length of a chunk
-max_iters = 10  # epoch (when user uploads text i can use the data i have to optimize)
-eval_interval = 100
-learning_rate = 3e-4
-device = "cuda" if torch.cuda.is_available() else "cpu"
-eval_iters = 1
-n_embd = 384
-n_head = 8  # 8 take way too long
-n_layer = 8  # 8
-dropout = 0.2
 
-print(device)
+# batch_size = 32  # 64 how many independent sequences will we process in parallel?
+# block_size = 128  # what is the maximum context length for prediction?
+# max_iters = 10  # epoch (when user uploads text i can use the data i have to optimize)
+# eval_interval = 100
+# learning_rate = 3e-4
+# device = "cuda" if torch.cuda.is_available() else "cpu"
+# eval_iters = 1
+# n_embd = 384
+# n_head = 8  # 8 take way too long
+# n_layer = 8  # 8
+# dropout = 0.2
+# model_path = "model/model-01.pk1"
+
+# Path for configuration file
+CONFIG_FILE = "configurations/config.json"
+MODEL_DIR = "model/new-model/"
+# Ensure the model directory exists
+os.makedirs(MODEL_DIR, exist_ok=True)
+
+
+def load_config():
+    with open(CONFIG_FILE, "r") as f:
+        return json.load(f)
+
+
+def save_config(config):
+    with open(CONFIG_FILE, "w") as f:
+        json.dump(config, f, indent=4)
+
+
+config = load_config()
+
+print(config["device"])
 torch.manual_seed(
     1337
 )  # when you set a random seed, it means that each time you run your program, you will get the same sequence of random numbers.
@@ -75,11 +99,12 @@ def get_random_chunk(split):  # split indicates whether to load data for train o
         ) as mm:  # opens the file in a binary mode and creates a memory-mapped file object (mmap) to efficiently access chunks of data without loading the entire file into memory
             # Determines the file size and a random position to start reading
             file_size = len(mm)
-            start_pos = random.randint(0, (file_size) - block_size * batch_size)
-
+            start_pos = random.randint(
+                0, (file_size) - config["block_size"] * config["batch_size"]
+            )
             # Seek to the random position and read the block of text
             mm.seek(start_pos)
-            block = mm.read(block_size * batch_size - 1)
+            block = mm.read(config["block_size"] * config["batch_size"] - 1)
 
             # Decode the block to a string, ignoring any invalid byte sequences
             decoded_block = block.decode("utf-8", errors="ignore").replace("\r", "")
@@ -94,15 +119,15 @@ def get_random_chunk(split):  # split indicates whether to load data for train o
 def get_batch(split):
     data = get_random_chunk(split)  # gets a chunk of data for the specific split
     ix = torch.randint(
-        len(data) - block_size, (batch_size,)
+        len(data) - config["block_size"], (config["batch_size"],)
     )  # generates random indices ix for selecting batch from data
     # creates tensors x and y representing input and target sequences, respectively, for the language model.
     # x is a stack of subsequences from the data, each of length block_size.
     # y is a stack of subsequences that follow the corresponding subsequences in x.
     # moves the tensors to the specified device (CPU or GPU).
-    x = torch.stack([data[i : i + block_size] for i in ix])
-    y = torch.stack([data[i + 1 : i + block_size + 1] for i in ix])
-    x, y = x.to(device), y.to(device)
+    x = torch.stack([data[i : i + config["block_size"]] for i in ix])
+    y = torch.stack([data[i + 1 : i + config["block_size"] + 1] for i in ix])
+    x, y = x.to(config["device"]), y.to(config["device"])
     return x, y
 
 
@@ -112,9 +137,9 @@ def estimate_loss(model):
     model.eval()  # puts the model on an evaluation mode
     for split in ["train", "val"]:
         losses = torch.zeros(
-            eval_iters
+            config["eval_iters"]
         )  # stores the losses obtained in multiple iterations
-        for k in range(eval_iters):
+        for k in range(config["eval_iters"]):
             X, Y = get_batch(split)
             logits, loss = model(X, Y)
             losses[k] = loss.item()
@@ -128,12 +153,14 @@ class Head(nn.Module):
 
     def __init__(self, head_size):
         super().__init__()
-        self.key = nn.Linear(n_embd, head_size, bias=False)
-        self.query = nn.Linear(n_embd, head_size, bias=False)
-        self.value = nn.Linear(n_embd, head_size, bias=False)
-        self.register_buffer("tril", torch.tril(torch.ones(block_size, block_size)))
+        self.key = nn.Linear(config["n_embd"], head_size, bias=False)
+        self.query = nn.Linear(config["n_embd"], head_size, bias=False)
+        self.value = nn.Linear(config["n_embd"], head_size, bias=False)
+        self.register_buffer(
+            "tril", torch.tril(torch.ones(config["block_size"], config["block_size"]))
+        )
 
-        self.dropout = nn.Dropout(dropout)
+        self.dropout = nn.Dropout(config["dropout"])
 
     def forward(self, x):
         # input of size (batch, time-step, channels)
@@ -160,8 +187,8 @@ class MultiHeadAttention(nn.Module):
     def __init__(self, num_heads, head_size):
         super().__init__()
         self.heads = nn.ModuleList([Head(head_size) for _ in range(num_heads)])
-        self.proj = nn.Linear(head_size * num_heads, n_embd)
-        self.dropout = nn.Dropout(dropout)
+        self.proj = nn.Linear(head_size * num_heads, config["n_embd"])
+        self.dropout = nn.Dropout(config["dropout"])
 
     def forward(self, x):
         out = torch.cat(
@@ -180,7 +207,7 @@ class FeedForward(nn.Module):
             nn.Linear(n_embd, 4 * n_embd),
             nn.ReLU(),
             nn.Linear(4 * n_embd, n_embd),
-            nn.Dropout(dropout),
+            nn.Dropout(config["dropout"]),
         )
 
     def forward(self, x):
@@ -211,13 +238,18 @@ class GPTLanguageModel(nn.Module):
     def __init__(self, vocab_size):
         super().__init__()
         # each token directly reads off the logits for the next token from a lookup table
-        self.token_embedding_table = nn.Embedding(vocab_size, n_embd)
-        self.position_embedding_table = nn.Embedding(block_size, n_embd)
-        self.blocks = nn.Sequential(
-            *[Block(n_embd, n_head=n_head) for _ in range(n_layer)]
+        self.token_embedding_table = nn.Embedding(vocab_size, config["n_embd"])
+        self.position_embedding_table = nn.Embedding(
+            config["block_size"], config["n_embd"]
         )
-        self.ln_f = nn.LayerNorm(n_embd)  # final layer norm
-        self.lm_head = nn.Linear(n_embd, vocab_size)
+        self.blocks = nn.Sequential(
+            *[
+                Block(config["n_embd"], n_head=config["n_head"])
+                for _ in range(config["n_layer"])
+            ]
+        )
+        self.ln_f = nn.LayerNorm(config["n_embd"])  # final layer norm
+        self.lm_head = nn.Linear(config["n_embd"], vocab_size)
 
         self.apply(self._init_weights)
 
@@ -234,7 +266,9 @@ class GPTLanguageModel(nn.Module):
 
         # idx and targets are both (B,T) tensor of integers
         tok_emb = self.token_embedding_table(index)  # (B,T,C)
-        pos_emb = self.position_embedding_table(torch.arange(T, device=device))  # (T,C)
+        pos_emb = self.position_embedding_table(
+            torch.arange(T, device=config["device"])
+        )  # (T,C)
         x = tok_emb + pos_emb  # (B,T,C)
         x = self.blocks(x)  # (B,T,C)
         x = self.ln_f(x)  # (B,T,C)
@@ -246,16 +280,7 @@ class GPTLanguageModel(nn.Module):
             B, T, C = logits.shape  # batch time and a channel is the vocabulary size
             logits = logits.view(B * T, C)
             targets = targets.view(B * T)
-            # loss = F.mse_loss(
-            #     logits.argmax(dim=1).type(torch.float), targets.type(torch.float)
-            # )
             loss = F.cross_entropy(logits, targets)
-            # loss = torch.sqrt(
-            #     torch.mean(
-            #         (logits.argmax(dim=1).type(torch.float) - targets.type(torch.float))
-            #         ** 2
-            #     )
-            # )
 
         return logits, loss
 
@@ -263,7 +288,7 @@ class GPTLanguageModel(nn.Module):
         # idx is (B, T) array of indices in the current context
         for _ in range(max_new_tokens):
             # crop idx to the last block_size tokens
-            idx_cond = idx[:, -block_size:]
+            idx_cond = idx[:, -config["block_size"] :]
             # get the predictions
             logits, loss = self(idx_cond)
             # focus only on the last time step
@@ -281,16 +306,20 @@ def main():
     model = GPTLanguageModel(vocab_size)
     # if you don't have your model make sure to comment this part before you create your model!
     # with this we will be able to train our model  multiple times
-    print("loading model parameters ...")
-    with open("model/model-01.pk1", "rb") as f:
-        model = pickle.load(f)
-    print("loaded successfully!")
-    m = model.to(device)
+    try:
+        print("loading model parameters ...")
+        with open(config["model_path"], "rb") as f:
+            model = pickle.load(f)
+        print("loaded successfully!")
+    except FileNotFoundError:
+        print("Model file not found, initializing new model!")
+        model = GPTLanguageModel(vocab_size)
+
+    m = model.to(config["device"])
 
     # create a PyTorch optimizer
-    optimizer = torch.optim.AdamW(model.parameters(), lr=learning_rate)
-
-    for iter in range(max_iters):
+    optimizer = torch.optim.AdamW(model.parameters(), lr=float(config["learning_rate"]))
+    for iter in range(config["max_iters"]):
         # sample a batch of data
         xb, yb = get_batch("train")
 
@@ -300,7 +329,7 @@ def main():
         loss.backward()
         optimizer.step()  # neuron get updated ????
         # every once in a while evaluate the loss on train and val sets
-        if iter % eval_iters == 0:
+        if iter % config["eval_iters"] == 0:
             losses = estimate_loss(model)
             print(
                 f"step {iter}, train loss {losses['train']:.3f}, validation loss {losses['val']:.3f}, model loss {loss:.3f}"
@@ -334,7 +363,7 @@ def main():
 
     # generate from the models
     def generate_text():
-        context = torch.zeros((1, 1), dtype=torch.long, device=device)
+        context = torch.zeros((1, 1), dtype=torch.long, device=config["device"])
         generated_chars = decode(m.generate(context, max_new_tokens=500)[0].tolist())
         return generated_chars
 
