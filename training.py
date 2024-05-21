@@ -303,7 +303,6 @@ class GPTLanguageModel(nn.Module):
 
 
 def main():
-    model = GPTLanguageModel(vocab_size)
     # if you don't have your model make sure to comment this part before you create your model!
     # with this we will be able to train our model  multiple times
     try:
