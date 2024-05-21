@@ -19,7 +19,7 @@ from sklearn.metrics import confusion_matrix, accuracy_score
 import matplotlib.pyplot as plt
 import data_extract
 import training
-from training import GPTLanguageModel
+from training import Block, FeedForward, Head, MultiHeadAttention, GPTLanguageModel
 import seaborn
 import pandas as pd
 
