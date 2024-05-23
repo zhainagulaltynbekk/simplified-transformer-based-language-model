@@ -5,6 +5,8 @@ import requests
 import PyPDF2
 import torch
 
+UPLOAD_FOLDER = "data/files/"
+
 
 # only url with pdf or txt files should be given
 def download_file_from_url(url, save_path):
@@ -161,3 +163,32 @@ class FileProcessor:
             if count > 0
         ]
         return bigram_list
+
+
+def main():
+    # Process the files using processor in data_extract.pyss
+    train_file_percentage = 0.9
+    val_file_percentage = 1 - train_file_percentage
+    output_file_train = "data/train_test.txt"
+    output_file_val = "data/val_test.txt"
+    vocab_file = "data/vocab_test.txt"
+    processor = FileProcessor(UPLOAD_FOLDER)
+    processor.process_text_files(
+        output_file_train, output_file_val, vocab_file, train_file_percentage
+    )
+    bigrams = processor.get_bigrams()
+    print(bigrams)
+    # Prepare the data to send back
+    with open(vocab_file, "r", encoding="utf-8") as f:
+        vocab = f.read()
+    with open(output_file_train, "r", encoding="utf-8") as f:
+        train_length = len(f.read())
+    with open(output_file_val, "r", encoding="utf-8") as f:
+        val_length = len(f.read())
+    print(
+        f"vocabulary length: {len(vocab)}, train length: {train_length}, val length: {val_length}"
+    )
+
+
+if __name__ == "__main__":
+    main()
