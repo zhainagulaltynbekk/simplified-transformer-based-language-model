@@ -2,7 +2,7 @@ import { useState } from 'react';
 import React from 'react';
 import './NavBar.css';
 
-const NavBar = ({ onMenuChange, content }) => {
+const NavBar = ({ onMenuChange }) => {
   const [menu, setMenu] = useState("Logs");
 
   const handleClick = (menuName) => {

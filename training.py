@@ -45,6 +45,8 @@ CONFIG_FILE = "configurations/config.json"
 MODEL_DIR = "model/new-model/"
 # Ensure the model directory exists
 os.makedirs(MODEL_DIR, exist_ok=True)
+IMAGE_DIR = "plt_images/"
+os.makedirs(IMAGE_DIR, exist_ok=True)
 
 
 def load_config():
@@ -59,7 +61,6 @@ def save_config(config):
 
 config = load_config()
 
-print(config["device"])
 torch.manual_seed(
     1337
 )  # when you set a random seed, it means that each time you run your program, you will get the same sequence of random numbers.
@@ -303,15 +304,31 @@ class GPTLanguageModel(nn.Module):
 
 
 def main():
+    print("Hyperparameters used for this training: ")
+    print(f"PARAM: batch_size: {config["batch_size"]}")
+    print(f"PARAM: block_size: {config["block_size"]}")
+    print(f"PARAM: max_iters: {config["max_iters"]}")
+    print(f"PARAM: eval_interval: {config["eval_interval"]}")
+    print(f"PARAM: learning_rate: {config["learning_rate"]}")
+    print(f"PARAM: device: {config["device"]}")
+    print(f"PARAM: eval_iters: {config["eval_iters"]}")
+    print(f"PARAM: n_embd: {config["n_embd"]}")
+    print(f"PARAM: n_head: {config["n_head"]}")
+    print(f"PARAM: n_layer: {config["n_layer"]}")
+    print(f"PARAM: dropout: {config["dropout"]}")
+    print(f"PARAM: model_path: {config["model_path"]}")
     # if you don't have your model make sure to comment this part before you create your model!
     # with this we will be able to train our model  multiple times
     try:
-        print("loading model parameters ...")
+        print("LOG: loading model parameters ...")
+        sys.stdout.flush()
         with open(config["model_path"], "rb") as f:
             model = pickle.load(f)
-        print("loaded successfully!")
+        print("LOG: loaded successfully!")
+        sys.stdout.flush()
     except FileNotFoundError:
-        print("Model file not found, initializing new model!")
+        print("LOG: Model file not found, initializing new model!")
+        sys.stdout.flush()
         model = GPTLanguageModel(vocab_size)
 
     m = model.to(config["device"])
@@ -331,34 +348,38 @@ def main():
         if iter % config["eval_iters"] == 0:
             losses = estimate_loss(model)
             print(
-                f"step {iter}, train loss {losses['train']:.3f}, validation loss {losses['val']:.3f}, model loss {loss:.3f}"
+                f"RESULT: step {iter}, train loss {losses['train']:.3f}, validation loss {losses['val']:.3f}, model loss {loss:.3f}"
             )
+            sys.stdout.flush()
             xt, yt = get_batch("val")
             y_predicted = model.generate(xt, max_new_tokens=2)[:, xt.shape[1] :]
             # y_predicted = decode(y_predicted)
             # yt = decode(y)
             accuracy_ = accuracy_score(yt[:, :2].flatten(), y_predicted.flatten())
-            print(accuracy_)
+            print(f"RESULT: {accuracy_}")
             accuracy = np.sum((yt[:, :2] == y_predicted).numpy()) / (len(yt) * 2)
             print(f"LOG: accuracy: {accuracy}")
+            sys.stdout.flush()
 
-    print(loss.item())
-    xt, yt = get_batch("val")
-    y_predicted = model.generate(xt, max_new_tokens=2)[:, xt.shape[1] :]
+            # Save confusion matrix
+            cm = confusion_matrix(yt[:, :2].flatten(), y_predicted.flatten())
+            labels = np.unique(np.concatenate((yt[:, :2], y_predicted)))
+            cm_df = pd.DataFrame(cm, index=labels, columns=labels)
+            cm_plot = seaborn.heatmap(cm_df, annot=True, cmap="Blues")
+            cm_plot.set_xlabel("Predicted Values")
+            cm_plot.set_ylabel("Actual Values")
+            cm_plot.set_title(f"Confusion Matrix at step {iter}", size=16)
+            plt.savefig(f"{IMAGE_DIR}/confusion_matrix_{iter}.png")
+            plt.clf()  # Clear the figure for the next plot
 
-    cm = confusion_matrix(yt[:, :2].flatten(), y_predicted.flatten())
-    labels = np.unique(np.concatenate((yt[:, :2], y_predicted)))
-    cm_df = pd.DataFrame(cm, index=labels, columns=labels)
-    cm_plot = seaborn.heatmap(cm_df, annot=True, cmap="Blues")
-    cm_plot.set_xlabel("Predicted Values")
-    cm_plot.set_ylabel("Actual Values")
-    cm_plot.set_title("Confusion Matrix", size=16)
-    plt.show()
+    print(f"RESULT: {loss.item()}")
+    sys.stdout.flush()
 
     #  it serializes the trained model and writes it to the file
     with open("model/model-01.pk1", "wb") as f:
         pickle.dump(model, f)  # dump = save
-    print("model saved")
+    print("LOG: Trained model saved")
+    sys.stdout.flush()
 
     # generate from the models
     def generate_text():
@@ -366,7 +387,12 @@ def main():
         generated_chars = decode(m.generate(context, max_new_tokens=500)[0].tolist())
         return generated_chars
 
-    print(generate_text())
+    print("SAMPLE_BLOCK_START")
+    sys.stdout.flush()
+    print(f"{generate_text()}")
+    sys.stdout.flush()
+    print("SAMPLE_BLOCK_END")
+    sys.stdout.flush()
 
 
 if __name__ == "__main__":

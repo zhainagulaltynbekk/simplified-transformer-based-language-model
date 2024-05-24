@@ -9,6 +9,7 @@ from flask import (
     jsonify,
     Response,
     stream_with_context,
+    send_from_directory,
 )
 from flask_cors import CORS
 import os
@@ -22,6 +23,7 @@ import training
 from training import Block, FeedForward, Head, MultiHeadAttention, GPTLanguageModel
 import seaborn
 import pandas as pd
+import subprocess
 
 # Path for configuration file
 CONFIG_FILE = "configurations/config.json"
@@ -32,6 +34,8 @@ os.makedirs(MODEL_DIR, exist_ok=True)
 # Define the path where uploaded files will be stored
 UPLOAD_FOLDER = "data/files/"
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
+IMAGE_DIR = "plt_images/"
+os.makedirs(IMAGE_DIR, exist_ok=True)
 
 
 def load_config():
@@ -80,103 +84,6 @@ except FileNotFoundError:
     model = GPTLanguageModel(vocab_size)
 
 m = model.to(config["device"])
-
-
-def train_model():
-    # Redirect stdout
-    old_stdout = sys.stdout
-    sys.stdout = output = io.StringIO()
-    try:
-        print("PARAM: Hyperparameters used for this training: ")
-        print(f"PARAM: Batch Size: {config['batch_size']}")
-        print(f"PARAM: Block Size: {config['block_size']}")
-        print(f"PARAM: Max Iterations: {config['max_iters']}")
-        print(f"PARAM: Evaluation Interval: {config['eval_interval']}")
-        print(f"PARAM: Learning Rate: {config['learning_rate']}")
-        print(f"PARAM: Device: {config['device']}")
-        print(f"PARAM: Evaluation Iterations: {config['eval_iters']}")
-        print(f"PARAM: Number of Embeddings: {config['n_embd']}")
-        print(f"PARAM: Number of Heads: {config['n_head']}")
-        print(f"PARAM: Number of Layers: {config['n_layer']}")
-        print(f"PARAM: Dropout Rate: {config['dropout']}")
-
-        print("LOG: Hyperparameters used for this training: ")
-        print(f"LOG: Batch Size: {config['batch_size']}")
-        print(f"LOG: Block Size: {config['block_size']}")
-        print(f"LOG: Max Iterations: {config['max_iters']}")
-        print(f"LOG: Evaluation Interval: {config['eval_interval']}")
-        print(f"LOG: Learning Rate: {config['learning_rate']}")
-        print(f"LOG: Device: {config['device']}")
-        print(f"LOG: Evaluation Iterations: {config['eval_iters']}")
-        print(f"LOG: Number of Embeddings: {config['n_embd']}")
-        print(f"LOG: Number of Heads: {config['n_head']}")
-        print(f"LOG: Number of Layers: {config['n_layer']}")
-        print(f"LOG: Dropout Rate: {config['dropout']}")
-
-        # Setup the training configuration
-        optimizer = torch.optim.AdamW(
-            model.parameters(), lr=float(config["learning_rate"])
-        )
-        for iter in range(config["max_iters"]):
-            xb, yb = training.get_batch("train")
-            # evaluate the loss
-            logits, loss = model.forward(xb, yb)
-            optimizer.zero_grad(set_to_none=True)
-            loss.backward()
-            optimizer.step()  # neuron get updated ????
-            # every once in a while evaluate the loss on train and val sets
-            if iter % config["eval_iters"] == 0:
-                losses = training.estimate_loss(model)
-                print(
-                    f"RESULT: step {iter}, train loss {losses['train']:.3f}, validation loss {losses['val']:.3f}, model loss {loss:.3f}"
-                )
-                print(
-                    f"LOG: step {iter}, train loss {losses['train']:.3f}, validation loss {losses['val']:.3f}, model loss {loss:.3f}"
-                )
-                xt, yt = training.get_batch("val")
-                y_predicted = model.generate(xt, max_new_tokens=2)[:, xt.shape[1] :]
-                # y_predicted = decode(y_predicted)
-                # yt = decode(y)
-                accuracy_ = accuracy_score(yt[:, :2].flatten(), y_predicted.flatten())
-                print(accuracy_)
-                accuracy = np.sum((yt[:, :2] == y_predicted).numpy()) / (len(yt) * 2)
-                print(f"LOG: accuracy: {accuracy}")
-
-            print(f"RESULT: {loss.item()}")
-            print(f"LOG: {loss.item()}")
-            xt, yt = training.get_batch("val")
-            y_predicted = model.generate(xt, max_new_tokens=2)[:, xt.shape[1] :]
-
-            cm = confusion_matrix(yt[:, :2].flatten(), y_predicted.flatten())
-            labels = np.unique(np.concatenate((yt[:, :2], y_predicted)))
-            cm_df = pd.DataFrame(cm, index=labels, columns=labels)
-            cm_plot = seaborn.heatmap(cm_df, annot=True, cmap="Blues")
-            cm_plot.set_xlabel("Predicted Values")
-            cm_plot.set_ylabel("Actual Values")
-            cm_plot.set_title("Confusion Matrix", size=16)
-            # plt.show()
-
-        #  it serializes the trained model and writes it to the file
-
-        with open(config["model_path"], "wb") as f:
-            pickle.dump(model, f)  # dump = save
-        print("LOG: model saved")
-
-        # generate from the models
-        def generate_text():
-            context = torch.zeros((1, 1), dtype=torch.long, device=config["device"])
-            generated_chars = decode(
-                m.generate(context, max_new_tokens=500)[0].tolist()
-            )
-            return generated_chars
-
-        print("SAMPLE_BLOCK_START")
-        print(generate_text())
-        print("SAMPLE_BLOCK_END")
-    finally:
-        # Restore stdout
-        sys.stdout = old_stdout
-    return output.getvalue()
 
 
 # Data Preperation route
@@ -238,6 +145,7 @@ def handle_files():
         return jsonify({"error": str(e)}), 500
 
 
+# Train route
 @app.route("/submit-form", methods=["POST"])
 def handle_form_submission():
     # Load existing configuration
@@ -278,15 +186,32 @@ def handle_form_submission():
 
 
 # Progress route
-@app.route("/model-train", methods=["POST"])
+@app.route("/model-train")
 def model_train_endpoint():
     def generate():
-        output = train_model()
-        for line in output.splitlines():
-            yield line + "\n"
-            time.sleep(0.5)  # Simulate delay for streaming
+        process = subprocess.Popen(
+            ["python", "training.py"],
+            stdout=subprocess.PIPE,
+            stderr=subprocess.STDOUT,
+            text=True,
+            bufsize=1,
+        )
 
-    return Response(stream_with_context(generate()), mimetype="text/plain")
+        for line in iter(process.stdout.readline, ""):
+            yield f"data:{line}\n\n"
+            sys.stdout.flush()
+
+        process.stdout.close()
+        process.wait()
+        yield "data:done\n\n"  # Indicate the end of the stream
+
+    return Response(stream_with_context(generate()), mimetype="text/event-stream")
+
+
+# Progress MAP image display
+@app.route("/images/<filename>")
+def serve_image(filename):
+    return send_from_directory(IMAGE_DIR, filename)
 
 
 # Chat route

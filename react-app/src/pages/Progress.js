@@ -1,107 +1,134 @@
 import '../App.css';
 import { NavLink } from 'react-router-dom';
-// import home from '../images/home.png';
 import chat from '../images/chat.png';
 import rocket from '../images/rocket.png';
 import progress from '../images/progress.png';
-import dataPrep from '../images/data-prep.png'
+import dataPrep from '../images/data-prep.png';
 import NavBar from '../components/NavBar';
 import { useState, useEffect } from 'react';
 
 const Progress = () => {  
-  const [currentMenu, setCurrentMenu] = useState("Logs");  // State to track the selected menu
-  const [logs, setLogs] = useState(["Logs will appear here ..."]);
-  const [results, setResults] = useState(["Results of the training will appear here ..."]);
-  const [parameters, setParameters] = useState(["Parameters used for this training will be listed here ..."]);
-  const [samples, setSample] = useState(["Sample trained text generated will be here ..."]);
+  const [currentMenu, setCurrentMenu] = useState("Logs");
+  const [logs, setLogs] = useState([{ message: "Logs will appear here ...", time: new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: true }) }]);
+  const [results, setResults] = useState([{ message: "Results of the training will appear here ...", time: new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: true }) }]);
+  const [parameters, setParameters] = useState([{ message: "Parameters used for this training will be listed here ...", time: new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: true }) }]);
+  const [samples, setSamples] = useState([{ message: "Sample trained text generated will be here ...", time: new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: true }) }]);
   const [loading, setLoading] = useState(false);
   const [currentDate, setCurrentDate] = useState('');
-  const [uploadTime, setUploadTime] = useState('');
+  const [imageSrcs, setImageSrcs] = useState([]);
+  const [currentImageIndex, setCurrentImageIndex] = useState(0);
 
-    useEffect(() => {
-        // Get the current date in the desired format
-        const date = new Date();
-        setCurrentDate(date.toLocaleDateString('en-US', {
-            year: 'numeric',
-            month: 'long',
-            day: 'numeric'
-        }));
-    }, []);
+  useEffect(() => {
+    const date = new Date();
+    setCurrentDate(date.toLocaleDateString('en-US', {
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric'
+    }));
+  }, []);
 
   const handleMenuChange = (menu) => {
-    setCurrentMenu(menu);  // Update the current menu state
-  }
+    setCurrentMenu(menu);
+  };
 
   const fetchLogs = async () => {
     setLoading(true);
-    setLogs(["Training process started."]); // Log that the training process has started
-    setResults(["Training process started. Results of the training process will be here."]);
-    setParameters(["Training process started. Parameters of the training will appear here."]);
-    setSample(["The below you can see the text sample text generated after the current training process."]);
-
-    const now = new Date();
-    setUploadTime(now.toLocaleTimeString('en-US', {
+    const now = new Date().toLocaleTimeString('en-US', {
       hour: '2-digit',
       minute: '2-digit',
       second: '2-digit',
       hour12: true
-    }));
-    
-    try {
-      const response = await fetch('http://localhost:5000/model-train', {
-        method: 'POST',
-        headers: {
-          'Accept': 'text/plain',
-          'Content-Type': 'application/json'
-        }
+    });
+    setLogs([{ message: "Training process started.", time: now }]);
+    setResults([{ message: "Training process started. Results of the training process will be here.", time: now }]);
+    setParameters([{ message: "Training process started. Parameters of the training will appear here.", time: now }]);
+    setSamples([{ message: "The below you can see the text sample text generated after the current training process.", time: now }]);
+    setImageSrcs([]);
+    setCurrentImageIndex(0);
+
+    const eventSource = new EventSource('http://localhost:5000/model-train');
+
+    let sampleBuffer = [];
+    let isSampleBlock = false;
+
+    eventSource.onmessage = function(event) {
+      const now = new Date().toLocaleTimeString('en-US', {
+        hour: '2-digit',
+        minute: '2-digit',
+        second: '2-digit',
+        hour12: true
       });
-  
-      if (!response.ok) {
-        throw new Error(`HTTP error! Status: ${response.status}`);
-      }
-  
-      const reader = response.body.getReader();
-      const decoder = new TextDecoder('utf-8');
-  
-      let done, value;
-      let isSampleBlock = false;
-      let sampleBuffer = [];
-      while (!done) {
-        ({ done, value } = await reader.read());
-        if (value) {
-          const logContent = decoder.decode(value, { stream: true }).replace(/\r\n?/g, "\n").split("\n");
-          logContent.forEach(line => {
-            if (line.startsWith("SAMPLE_BLOCK_START")) {
-              isSampleBlock = true;
-              sampleBuffer = [];
-            } else if (line.startsWith("SAMPLE_BLOCK_END")) {
-              isSampleBlock = false;
-              setSample(prevSample => [...prevSample, sampleBuffer.join('\n')]);  // Join buffer and update sample
-            } else if (isSampleBlock) {
-              sampleBuffer.push(line);
-            } else {
-              if (line.startsWith("LOG:")) {
-                setLogs(prevLogs => [...prevLogs, line.substring(5)]);
-              } else if (line.startsWith("RESULT:")) {
-                setResults(prevResults => [...prevResults, line.substring(8)]);
-              } else if (line.startsWith("PARAM:")) {
-                setParameters(prevParams => [...prevParams, line.substring(7)]);
-              }
+
+      if (event.data === "done") {
+        setLogs(prevLogs => [...prevLogs, { message: "Training completed", time: now }]);
+        setLoading(false);
+        eventSource.close();
+
+        // Fetch confusion matrix images up to the latest generated index
+        const fetchImages = async () => {
+          for (let i = 0; i <= 9; i += 1) {
+            const response = await fetch(`http://localhost:5000/images/confusion_matrix_${i}.png?${new Date().getTime()}`);
+            if (response.ok) {
+              const src = `http://localhost:5000/images/confusion_matrix_${i}.png?${new Date().getTime()}`;
+              setImageSrcs(prevImageSrcs => [...prevImageSrcs, {src, time: now}]);
             }
-          });
+          }
+        };
+
+        fetchImages();
+      } else {
+        const line = event.data;
+        const cleanLine = line.replace(/^LOG: |^RESULT: |^PARAM: /, '');
+
+        if (line.startsWith("SAMPLE_BLOCK_START")) {
+          isSampleBlock = true;
+          sampleBuffer = [];
+        } else if (line.startsWith("SAMPLE_BLOCK_END")) {
+          isSampleBlock = false;
+          setSamples(prevSamples => [...prevSamples, { message: sampleBuffer.join('\n'), time: now }]);
+        } else if (isSampleBlock) {
+          sampleBuffer.push(line);
+        } else {
+          const logEntry = { message: cleanLine, time: now };
+
+          if (line.startsWith("LOG:")) {
+            setLogs(prevLogs => [...prevLogs, logEntry]);
+          } else if (line.startsWith("RESULT:")) {
+            setResults(prevResults => [...prevResults, logEntry]);
+            setLogs(prevLogs => [...prevLogs, logEntry]);
+          } else if (line.startsWith("PARAM:")) {
+            setParameters(prevParams => [...prevParams, logEntry]);
+            setLogs(prevLogs => [...prevLogs, logEntry]);
+          } else {
+            setLogs(prevLogs => [...prevLogs, logEntry]);
+          }
         }
       }
-  
-      setLogs(prevLogs => [...prevLogs, "Training completed"]); // Log that the training is completed
-    } catch (error) {
-      console.error('Failed to fetch logs:', error.message);
-      setLogs(prevLogs => [...prevLogs, "Failed to fetch logs."]);
-    } finally {
+    };
+
+    eventSource.onerror = function(err) {
+      console.error('EventSource failed:', err);
       setLoading(false);
-    }
+      eventSource.close();
+    };
+
+    eventSource.onopen = function() {
+      console.log('Connection to server opened.');
+    };
+
+    return () => {
+      eventSource.close();
+    };
   };
-  
-  // Render the corresponding text based on the selected menu
+
+  const nextImage = () => {
+    setCurrentImageIndex(prevIndex => (prevIndex + 1) % imageSrcs.length);
+  };
+
+  const prevImage = () => {
+    setCurrentImageIndex(prevIndex => (prevIndex - 1 + imageSrcs.length) % imageSrcs.length);
+  };
+
   const renderContent = () => {
     const header = (
       <div className="nav-header">
@@ -116,29 +143,72 @@ const Progress = () => {
         return (
           <div className='nav-content'>
             {header}
-            {logs.map((log, index) => <p className="progress-log" key={index}>{log}<span className="upload-time-prg">{uploadTime}</span></p>)}
+            {logs.map((log, index) => (
+              <div key={index} className="progress-log">
+                <span>{log.message}</span>
+                <span className="upload-time-prg">{log.time}</span>
+              </div>
+            ))}
+            {imageSrcs.length > 0 && (
+              <div className="image-container">
+                <div className="image-nav-buttons">
+                  <button onClick={prevImage} className="image-nav-button">Previous</button>
+                  <button onClick={nextImage} className="image-nav-button">Next</button>
+                </div>
+                <div className='progress-log'>
+                  <img src={imageSrcs[currentImageIndex].src} alt={`Confusion Matrix ${currentImageIndex}`} className="confusion-matrix" />
+                  <span className="upload-time-prg">{imageSrcs[currentImageIndex].time}</span>
+                </div>
+              </div>
+            )}
           </div>
         );
       case "Results":
         return (
           <div className='nav-content'>
             {header}
-            {results.map((result, index) => <p className="progress-log" key={index}>{result}<span className="upload-time-prg">{uploadTime}</span></p>)}
+            {results.map((result, index) => (
+              <div key={index} className="progress-log">
+                <span>{result.message}</span>
+                <span className="upload-time-prg">{result.time}</span>
+              </div>
+            ))}
+            {imageSrcs.length > 0 && (
+              <div className="image-container">
+                <div className="image-nav-buttons">
+                  <button onClick={prevImage} className="image-nav-button">Previous</button>
+                  <button onClick={nextImage} className="image-nav-button">Next</button>
+                </div>
+                <div className='progress-log'>
+                  <img src={imageSrcs[currentImageIndex].src} alt={`Confusion Matrix ${currentImageIndex}`} className="confusion-matrix" />
+                  <span className="upload-time-prg">{imageSrcs[currentImageIndex].time}</span>
+                </div>
+              </div>
+            )}
           </div>
         );
       case "Parameters":
         return (
           <div className='nav-content'>
             {header}
-            {parameters.map((param, index) => <p className="progress-log" key={index}>{param}<span className="upload-time-prg">{uploadTime}</span></p>)}
+            {parameters.map((param, index) => (
+              <div key={index} className="progress-log">
+                <span>{param.message}</span>
+                <span className="upload-time-prg">{param.time}</span>
+              </div>
+            ))}
           </div>
         );
       case "Sample":
         return (
           <div className='nav-content'>
             {header}
-            <p className='progress-log'>Training process started.<span className="upload-time-prg">{uploadTime}</span></p>
-            {samples.map((sample, index) => <p className="progress-log" key={index}>{sample}</p>)}
+            {samples.map((sample, index) => (
+              <div key={index} className="progress-log">
+                <span>{sample.message}</span>
+                <span className="upload-time-prg">{sample.time}</span>
+              </div>
+            ))}
           </div>
         );
       default:
@@ -151,35 +221,31 @@ const Progress = () => {
     }
   };
 
-
   return (
-      <div className="App">
-        <div className='sideBar'>
-          <div className='upperSide'>
-            {/* <NavLink to="/" className={({ isActive }) => isActive ? 'listItems activeLink' : 'listItems'}>
-                <img src={home} alt='saved' className='listItemsImg' />Home
-            </NavLink> */}
-            <NavLink to="/" className={({ isActive }) => isActive ? 'listItems activeLink' : 'listItems'} end>
-                <img src={chat} alt='chat' className='listItemsImg' />Chat
-            </NavLink>
-            <NavLink to="/data-prep" className={({ isActive }) => isActive ? 'listItems activeLink' : 'listItems'}>
-                <img src={dataPrep} alt='data preperation' className='listItemsImg' />Data Preperation
-            </NavLink>
-            <NavLink to="/train" className={({ isActive }) => isActive ? 'listItems activeLink' : 'listItems'}>
-                <img src={rocket} alt='train' className='listItemsImg' />Train
-            </NavLink>
-            <NavLink to="/progress" className={({ isActive }) => isActive ? 'listItems activeLink' : 'listItems'}>
-                <img src={progress} alt='progress' className='listItemsImg' />Progress
-            </NavLink>
-          </div>
-        </div>
-        <div className="main">
-          <h2 className='pageName'>Progress</h2>
-          <button className='trainBtn' onClick={fetchLogs}>{loading ? "Training..." : "Train"}</button>
-          <NavBar onMenuChange={handleMenuChange}/>
-          {renderContent()}
+    <div className="App">
+      <div className='sideBar'>
+        <div className='upperSide'>
+          <NavLink to="/" className={({ isActive }) => isActive ? 'listItems activeLink' : 'listItems'} end>
+            <img src={chat} alt='chat' className='listItemsImg' />Chat
+          </NavLink>
+          <NavLink to="/data-prep" className={({ isActive }) => isActive ? 'listItems activeLink' : 'listItems'}>
+            <img src={dataPrep} alt='data preperation' className='listItemsImg' />Data Preperation
+          </NavLink>
+          <NavLink to="/train" className={({ isActive }) => isActive ? 'listItems activeLink' : 'listItems'}>
+            <img src={rocket} alt='train' className='listItemsImg' />Train
+          </NavLink>
+          <NavLink to="/progress" className={({ isActive }) => isActive ? 'listItems activeLink' : 'listItems'}>
+            <img src={progress} alt='progress' className='listItemsImg' />Progress
+          </NavLink>
         </div>
       </div>
+      <div className="main">
+        <h2 className='pageName'>Progress</h2>
+        <button className='trainBtn' onClick={fetchLogs}>{loading ? "Training..." : "Train"}</button>
+        <NavBar onMenuChange={handleMenuChange} />
+        {renderContent()}
+      </div>
+    </div>
   );
 }
 
