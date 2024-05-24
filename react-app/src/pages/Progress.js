@@ -6,6 +6,8 @@ import progress from '../images/progress.png';
 import dataPrep from '../images/data-prep.png';
 import NavBar from '../components/NavBar';
 import { useState, useEffect } from 'react';
+import { Line } from 'react-chartjs-2';
+import 'chart.js/auto';
 
 const Progress = () => {  
   const [currentMenu, setCurrentMenu] = useState("Logs");
@@ -17,6 +19,32 @@ const Progress = () => {
   const [currentDate, setCurrentDate] = useState('');
   const [imageSrcs, setImageSrcs] = useState([]);
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
+  const [chartData, setChartData] = useState({
+    labels: [],
+    datasets: [
+      {
+        label: 'Training Loss',
+        data: [],
+        borderColor: 'rgba(75, 192, 192, 1)',
+        backgroundColor: 'rgba(75, 192, 192, 0.2)',
+        fill: true,
+      },
+      {
+        label: 'Validation Loss',
+        data: [],
+        borderColor: 'rgba(153, 102, 255, 1)',
+        backgroundColor: 'rgba(153, 102, 255, 0.2)',
+        fill: true,
+      },
+      {
+        label: 'Model Loss',
+        data: [],
+        borderColor: 'rgba(255, 99, 132, 1)',
+        backgroundColor: 'rgba(255, 99, 132, 0.2)',
+        fill: true,
+      }
+    ]
+  });
 
   useEffect(() => {
     const date = new Date();
@@ -64,7 +92,6 @@ const Progress = () => {
         setLoading(false);
         eventSource.close();
 
-        // Fetch confusion matrix images up to the latest generated index
         const fetchImages = async () => {
           for (let i = 0; i <= 9; i += 1) {
             const response = await fetch(`http://localhost:5000/images/confusion_matrix_${i}.png?${new Date().getTime()}`);
@@ -94,6 +121,19 @@ const Progress = () => {
           if (line.startsWith("LOG:")) {
             setLogs(prevLogs => [...prevLogs, logEntry]);
           } else if (line.startsWith("RESULT:")) {
+            if (cleanLine.includes('train loss') || cleanLine.includes('validation loss') || cleanLine.includes('model loss')) {
+              const [step, trainLoss, valLoss, modelLoss] = cleanLine.match(/step (\d+), train loss ([\d.]+), validation loss ([\d.]+), model loss ([\d.]+)/).slice(1, 5);
+              setChartData(prevChartData => ({
+                ...prevChartData,
+                labels: [...prevChartData.labels, `Step ${step}`],
+                datasets: prevChartData.datasets.map(dataset => {
+                  if (dataset.label === 'Training Loss') return { ...dataset, data: [...dataset.data, trainLoss] };
+                  if (dataset.label === 'Validation Loss') return { ...dataset, data: [...dataset.data, valLoss] };
+                  if (dataset.label === 'Model Loss') return { ...dataset, data: [...dataset.data, modelLoss] };
+                  return dataset;
+                })
+              }));
+            }
             setResults(prevResults => [...prevResults, logEntry]);
             setLogs(prevLogs => [...prevLogs, logEntry]);
           } else if (line.startsWith("PARAM:")) {
@@ -143,6 +183,9 @@ const Progress = () => {
         return (
           <div className='nav-content'>
             {header}
+            <div className="chart-container">
+              <Line data={chartData} />
+            </div>
             {logs.map((log, index) => (
               <div key={index} className="progress-log">
                 <span>{log.message}</span>
@@ -167,6 +210,9 @@ const Progress = () => {
         return (
           <div className='nav-content'>
             {header}
+            <div className="chart-container">
+              <Line data={chartData} />
+            </div>
             {results.map((result, index) => (
               <div key={index} className="progress-log">
                 <span>{result.message}</span>

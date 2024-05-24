@@ -49,6 +49,12 @@ IMAGE_DIR = "plt_images/"
 os.makedirs(IMAGE_DIR, exist_ok=True)
 
 
+# Define a function to log metrics and flush output
+def log_metrics(message):
+    print(message)
+    sys.stdout.flush()
+
+
 def load_config():
     with open(CONFIG_FILE, "r") as f:
         return json.load(f)
@@ -321,31 +327,28 @@ class GPTLanguageModel(nn.Module):
 
 
 def main():
-    print("Hyperparameters used for this training: ")
-    print(f"PARAM: batch_size: {config["batch_size"]}")
-    print(f"PARAM: block_size: {config["block_size"]}")
-    print(f"PARAM: max_iters: {config["max_iters"]}")
-    print(f"PARAM: eval_interval: {config["eval_interval"]}")
-    print(f"PARAM: learning_rate: {config["learning_rate"]}")
-    print(f"PARAM: device: {config["device"]}")
-    print(f"PARAM: eval_iters: {config["eval_iters"]}")
-    print(f"PARAM: n_embd: {config["n_embd"]}")
-    print(f"PARAM: n_head: {config["n_head"]}")
-    print(f"PARAM: n_layer: {config["n_layer"]}")
-    print(f"PARAM: dropout: {config["dropout"]}")
-    print(f"PARAM: model_path: {config["model_path"]}")
+    log_metrics("Hyperparameters used for this training: ")
+    log_metrics(f"PARAM: batch_size: {config["batch_size"]}")
+    log_metrics(f"PARAM: block_size: {config["block_size"]}")
+    log_metrics(f"PARAM: max_iters: {config["max_iters"]}")
+    log_metrics(f"PARAM: eval_interval: {config["eval_interval"]}")
+    log_metrics(f"PARAM: learning_rate: {config["learning_rate"]}")
+    log_metrics(f"PARAM: device: {config["device"]}")
+    log_metrics(f"PARAM: eval_iters: {config["eval_iters"]}")
+    log_metrics(f"PARAM: n_embd: {config["n_embd"]}")
+    log_metrics(f"PARAM: n_head: {config["n_head"]}")
+    log_metrics(f"PARAM: n_layer: {config["n_layer"]}")
+    log_metrics(f"PARAM: dropout: {config["dropout"]}")
+    log_metrics(f"PARAM: model_path: {config["model_path"]}")
     # if you don't have your model make sure to comment this part before you create your model!
     # with this we will be able to train our model  multiple times
     try:
-        print("LOG: loading model parameters ...")
-        sys.stdout.flush()
+        log_metrics("LOG: loading model parameters ...")
         with open(config["model_path"], "rb") as f:
             model = pickle.load(f)
-        print("LOG: loaded successfully!")
-        sys.stdout.flush()
+        log_metrics("LOG: loaded successfully!")
     except FileNotFoundError:
-        print("LOG: Model file not found, initializing new model!")
-        sys.stdout.flush()
+        log_metrics("LOG: Model file not found, initializing new model!")
         model = GPTLanguageModel(vocab_size)
 
     m = model.to(config["device"])
@@ -364,10 +367,9 @@ def main():
         # every once in a while evaluate the loss on train and val sets
         if iter % config["eval_iters"] == 0:
             losses = estimate_loss(model)
-            print(
+            log_metrics(
                 f"RESULT: step {iter}, train loss {losses['train']:.3f}, validation loss {losses['val']:.3f}, model loss {loss:.3f}"
             )
-            sys.stdout.flush()
             xt, yt = get_batch("val")
             y_predicted = model.generate(xt, max_new_tokens=2)[:, xt.shape[1] :]
             # y_predicted = decode(y_predicted)
@@ -375,8 +377,7 @@ def main():
             accuracy_ = accuracy_score(yt[:, :2].flatten(), y_predicted.flatten())
             # print(f"RESULT: {accuracy_}")
             accuracy = np.sum((yt[:, :2] == y_predicted).numpy()) / (len(yt) * 2)
-            print(f"RESULT: accuracy: {accuracy}")
-            sys.stdout.flush()
+            log_metrics(f"RESULT: accuracy: {accuracy}")
 
             # Save confusion matrix
             cm = confusion_matrix(yt[:, :2].flatten(), y_predicted.flatten())
@@ -389,14 +390,12 @@ def main():
             plt.savefig(f"{IMAGE_DIR}/confusion_matrix_{iter}.png")
             plt.clf()  # Clear the figure for the next plot
 
-    print(f"RESULT: {loss.item()}")
-    sys.stdout.flush()
+    log_metrics(f"RESULT: {loss.item()}")
 
     #  it serializes the trained model and writes it to the file
     with open("model/model-01.pk1", "wb") as f:
         pickle.dump(model, f)  # dump = save
-    print("LOG: Trained model saved")
-    sys.stdout.flush()
+    log_metrics("LOG: Trained model saved")
 
     # generate from the models
     def generate_text():
@@ -404,12 +403,9 @@ def main():
         generated_chars = decode(m.generate(context, max_new_tokens=500)[0].tolist())
         return generated_chars
 
-    print("SAMPLE_BLOCK_START")
-    sys.stdout.flush()
-    print(f"{generate_text()}")
-    sys.stdout.flush()
-    print("SAMPLE_BLOCK_END")
-    sys.stdout.flush()
+    log_metrics("SAMPLE_BLOCK_START")
+    log_metrics(f"{generate_text()}")
+    log_metrics("SAMPLE_BLOCK_END")
 
 
 if __name__ == "__main__":
