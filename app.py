@@ -57,33 +57,8 @@ with open(
 ) as f:  # when we open huge files we can not open them in RAM at once, so we use unique set of chars instead
     text = f.read()
 
-# here are all the unique characters that occur in this text
-chars = sorted(list(set(text)))
-vocab_size = len(chars)
-
 app = Flask(__name__)
 CORS(app, supports_credentials=True, resources={r"/*": {"origins": "*"}})
-# CORS(app, resources={r"/model-train/*": {"origins": "http://localhost:3000"}})
-
-# create a mapping from characters to integers
-stoi = {ch: i for i, ch in enumerate(chars)}
-itos = {i: ch for i, ch in enumerate(chars)}
-encode = lambda s: [stoi[c] for c in s]  # encoder: take a string, output a list of ints
-decode = lambda l: "".join(
-    [itos[i] for i in l]
-)  # decoder: take list of integers, output a string
-
-# Initialize your chatbot model
-try:
-    print("loading model parameters ...")
-    with open(config["model_path"], "rb") as f:
-        model = pickle.load(f)
-    print("loaded successfully!")
-except FileNotFoundError:
-    print("Model file not found, initializing new model!")
-    model = GPTLanguageModel(vocab_size)
-
-m = model.to(config["device"])
 
 
 # Data Preperation route
@@ -221,17 +196,21 @@ def stream_chat():
     msg = data["msg"]
 
     def generate_stream():
-        context = torch.tensor(encode(msg), dtype=torch.long)
-        generated_idx = m.generate(context.unsqueeze(0), max_new_tokens=150)[0]
+        process = subprocess.Popen(
+            ["python", "-u", "generate.py", msg],
+            stdout=subprocess.PIPE,
+            stderr=subprocess.STDOUT,
+            text=True,
+            bufsize=1,
+        )
 
-        # Determine where the new text starts by skipping the input context length
-        generated_tokens = generated_idx.tolist()[len(context) :]
+        for line in iter(process.stdout.readline, ""):
+            yield line.replace("\n", "")
+            sys.stdout.flush()
+            # print(str.encode(line, "utf-8"))
 
-        # Generate and yield each character of the new text
-        for token in generated_tokens:
-            character = decode([token])
-            yield character
-            time.sleep(0.05)  # Delay to simulate typing
+        process.stdout.close()
+        process.wait()
 
     return Response(stream_with_context(generate_stream()), mimetype="text/plain")
 

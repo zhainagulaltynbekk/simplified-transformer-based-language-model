@@ -302,6 +302,23 @@ class GPTLanguageModel(nn.Module):
             idx = torch.cat((idx, idx_next), dim=1)  # (B, T+1)
         return idx
 
+    def generate_token_by_token(self, idx, max_new_tokens):
+        # idx is (B, T) array of indices in the current context
+        for _ in range(max_new_tokens):
+            # crop idx to the last block_size tokens
+            idx_cond = idx[:, -config["block_size"] :]
+            # get the predictions
+            logits, loss = self(idx_cond)
+            # focus only on the last time step
+            logits = logits[:, -1, :]  # becomes (B, C)
+            # apply softmax to get probabilities
+            probs = F.softmax(logits, dim=-1)  # (B, C)
+            # sample from the distribution
+            idx_next = torch.multinomial(probs, num_samples=1)  # (B, 1)
+            # append sampled index to the running sequence
+            idx = torch.cat((idx, idx_next), dim=1)  # (B, T+1)
+            yield idx_next
+
 
 def main():
     print("Hyperparameters used for this training: ")
@@ -356,9 +373,9 @@ def main():
             # y_predicted = decode(y_predicted)
             # yt = decode(y)
             accuracy_ = accuracy_score(yt[:, :2].flatten(), y_predicted.flatten())
-            print(f"RESULT: {accuracy_}")
+            # print(f"RESULT: {accuracy_}")
             accuracy = np.sum((yt[:, :2] == y_predicted).numpy()) / (len(yt) * 2)
-            print(f"LOG: accuracy: {accuracy}")
+            print(f"RESULT: accuracy: {accuracy}")
             sys.stdout.flush()
 
             # Save confusion matrix
