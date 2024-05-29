@@ -54,27 +54,27 @@ const Train = () => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     const data = new FormData();
-    // Append all text-based inputs to the FormData object from state
     Object.entries(formData).forEach(([key, value]) => {
         if (key !== 'file') {
             data.append(key, value);
-        } else if (value) { // Only append file if it's not null
-            data.append('file', value, value.name); // Include the file name
+        } else if (value) {
+            data.append('file', value, value.name);
         }
     });
 
     try {
-        const responseData = {
-            ...formData,
-            fileName: formData.file ? formData.file.name : null
-        };
-        setSubmittedData(responseData);
+        const response = await fetch('http://localhost:5000/submit-form', {
+            method: 'POST',
+            body: data,
+        });
+        const responseData = await response.json();
+        setSubmittedData(responseData.configUpdated);  // Update to use the updated config from the server
         alert('Form submitted successfully!');
     } catch (error) {
         alert('Failed to submit form!');
         console.error('Error:', error);
     }
-  };
+};
 
   return (
     <div className="App">
@@ -164,19 +164,19 @@ const Train = () => {
             <div className="border-edge"></div>
           </div>
           <div className='data-info-train'>
-          Your submitted data:
-          </div>
-          {submittedData && (
-            <div>
-              <h3 className='data-title-first'>Hyperparameters</h3>
-              {Object.entries(submittedData).map(([key, value]) => (
-                key !== 'file' ? <div className='data-info' key={key}>{`${key}: ${value}`}</div> : null
-              ))}
-              <div className='data-info'>
-                {submittedData.fileName ? `File chosen: ${submittedData.fileName}` : "Model is not given, default model in model/ will be used or the new one will be created."}
-              </div>
-            </div>
-          )}
+    Your submitted data:
+</div>
+{submittedData && (
+    <div>
+        <h3 className='data-title-first'>Hyperparameters</h3>
+        {Object.entries(submittedData).map(([key, value]) => (
+            key !== 'file' ? <div className='data-info' key={key}>{`${key}: ${value}`}</div> : null
+        ))}
+        <div className='data-info'>
+            {submittedData.file ? `File chosen: ${submittedData.file}` : "Model is not given, default model in model/ will be used or the new one will be created."}
+        </div>
+    </div>
+)}
         </div>
       </div>
     </div>

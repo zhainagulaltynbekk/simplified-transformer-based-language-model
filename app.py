@@ -123,41 +123,55 @@ def handle_files():
 # Train route
 @app.route("/submit-form", methods=["POST"])
 def handle_form_submission():
-    # Load existing configuration
-    load_config()
+    try:
+        load_config()  # Load existing configuration
+        form_data = {
+            key: request.form[key] for key in request.form.keys()
+        }  # Process form data
 
-    # Process text fields and update config
-    form_data = {key: value for key, value in request.form.items()}
-    for key, value in form_data.items():
-        if key in config:  # Only update if the key exists in the config
-            try:
-                # Convert to appropriate type based on current config type
-                config[key] = type(config[key])(value)
-            except ValueError:
-                continue  # Skip if conversion fails, you could log this or handle differently
+        # Update config with form data
+        for key, value in form_data.items():
+            if key in config and value:  # Ensure the key exists and value is not empty
+                config[key] = type(config[key])(
+                    value
+                )  # Convert to the appropriate type
 
-    # Handle file upload
-    file = request.files.get("file")
-    if file:
-        filename = secure_filename(file.filename)
-        file_path = os.path.join(MODEL_DIR, filename)
-        file.save(file_path)
-        config["model_path"] = file_path  # Update config to new model path
-        print(f"File saved to {file_path}")
-    else:
-        config["model_path"] = "model/model-01.pk1"  # No file uploaded, use default
+        # Handle file upload
+        file = request.files.get("file")
+        if file:
+            filename = secure_filename(file.filename)
+            file_path = os.path.join(MODEL_DIR, filename)
+            file.save(file_path)
+            config["model_path"] = file_path  # Update config to new model path
+        else:
+            # Default model path handling
+            default_model_path = "model/model-01.pk1"
+            if not os.path.exists(default_model_path):
+                # Logic to create a new model if default is not found
+                # This can be an initialization of a new model save or similar logic
+                # Placeholder: Initialize and save new model
+                config["model_path"] = "model/new-model/default-new-model.pk1"
+                # Example to create a new model, adjust with your model creation logic
+                # new_model = initialize_new_model()
+                # torch.save(new_model, config["model_path"])
+            else:
+                config["model_path"] = default_model_path  # Use existing default model
 
-    # Save updated configuration
-    save_config(config)
+        save_config(config)  # Save the updated configuration
 
-    # Prepare a response
-    response = {
-        "message": "Form submitted successfully!",
-        "receivedData": form_data,
-        "fileSaved": filename if file else "No file uploaded",
-        "configUpdated": config,
-    }
-    return jsonify(response), 200
+        return (
+            jsonify(
+                {
+                    "message": "Form submitted successfully!",
+                    "receivedData": form_data,
+                    "fileSaved": filename if file else "No file uploaded",
+                    "configUpdated": config,
+                }
+            ),
+            200,
+        )
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
 
 
 # Progress route
